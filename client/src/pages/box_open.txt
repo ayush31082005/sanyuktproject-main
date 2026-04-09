@@ -1,0 +1,121 @@
+355:        <Box>
+357:                <Box>
+409:            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1 }}>
+417:                            <Box sx={{ border: '2px dashed #e0e0e0', borderRadius: '12px', p: 2, textAlign: 'center', position: 'relative', height: '160px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: kycData.kycDocuments[docType] ? '#fff' : '#fafafa', transition: 'all 0.2s', '&:hover': { borderColor: '#0A7A2F', bgcolor: '#f4fbf5' } }}>
+449:                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+466:                    <Box sx={{ textAlign: 'center' }}>
+517:                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+518:                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+522:                                <Box>
+524:                                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 3 } }}>
+525:                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><EmailIcon fontSize="small" /><Typography variant="body2">{formatValue(userData.email)}</Typography></Box>
+526:                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PhoneIcon fontSize="small" /><Typography variant="body2">{formatValue(userData.mobile)}</Typography></Box>
+540:                    <Box sx={{ display: 'flex', mb: 1, px: 1 }}>
+567:                        <Box sx={{ width: { xs: 0, sm: '220px' }, display: defaultTab !== undefined ? 'none' : { xs: 'none', sm: 'flex' }, flexShrink: 0, background: 'linear-gradient(180deg, #0A7A2F 0%, #1a8c3a 60%, #0A7A2F 100%)', flexDirection: 'column', py: 3, overflowY: 'auto', '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '10px' } }}>
+569:                                <Box key={item.index} onClick={() => navigate(item.path)} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1.5 }, justifyContent: { xs: 'center', sm: 'flex-start' }, px: { xs: 0, sm: 2.5 }, py: 1.75, mx: 1.5, mb: 0.5, borderRadius: '10px', cursor: 'pointer', transition: 'all 0.2s ease', bgcolor: tabValue === item.index ? 'rgba(255,255,255,0.2)' : 'transparent', borderLeft: tabValue === item.index ? '3px solid #F7931E' : '3px solid transparent', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' } }}>
+570:                                    <Box sx={{ color: tabValue === item.index ? '#F7931E' : 'rgba(255,255,255,0.8)', display: 'flex' }}>
+581:                        <Box sx={{ flex: 1, p: defaultTab !== undefined ? { xs: 0, sm: 1, md: 2 } : { xs: 1.5, sm: 2, md: 3 }, overflowY: 'auto', bgcolor: defaultTab !== undefined ? 'transparent' : '#fafafa', height: '100%', position: 'relative' }}>
+584:                            {tabValue === -1 && <Box><CartPage /></Box>}
+588:                                <Box>
+589:                                    <Box sx={{ mb: 3, borderRadius: '18px', overflow: 'hidden', border: '1px solid #e8f5e9', boxShadow: '0 4px 20px rgba(10,122,47,0.1)' }}>
+590:                                        <Box sx={{ height: '6px', background: 'linear-gradient(90deg, #0A7A2F, #F7931E, #0A7A2F)' }} />
+591:                                        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, bgcolor: 'white', flexWrap: 'wrap' }}>
+592:                                            <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2.5, flexDirection: { xs: 'column', sm: 'row' }, width: { xs: '100%', sm: 'auto' } }}>
+593:                                                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+599:                                                            <Box component="label" htmlFor="profile-image-upload" sx={{ position: 'absolute', bottom: 0, right: 0, bgcolor: '#0A7A2F', borderRadius: '50%', width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid white', '&:hover': { bgcolor: '#085c22' } }}>
+606:                                                <Box>
+608:                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75 }}>
+609:                                                        <Box sx={{ bgcolor: '#e8f5e9', color: '#0A7A2F', fontWeight: 600, fontSize: '11px', px: 1.5, py: 0.25, borderRadius: '20px' }}>ID: {formatValue(userData.memberId)}</Box>
+610:                                                        <Box sx={{ bgcolor: '#fffbed', color: '#F7931E', fontWeight: 600, fontSize: '11px', px: 1.5, py: 0.25, borderRadius: '20px' }}>{formatValue(userData.position)}</Box>
+618:                                                <Box sx={{ display: 'flex', gap: 1, ml: { xs: 0, sm: 'auto' } }}>
+628:                                        <Box sx={{ px: 3, py: 2, borderBottom: '1px solid #f0f0f0', bgcolor: '#fcfdfc' }}>
+631:                                        <Box sx={{ px: 3, py: 1.5 }}>
+660:                                                            <Box sx={{ mb: 1 }}>
+664:                                                                <Box sx={{
+689:                                        <Box sx={{ px: 3, py: 2, bgcolor: '#f8fbf9', borderBottom: '1px solid #f0f0f0' }}>
+694:                                        <Box sx={{ px: 3, py: 1.5 }}>
+703:                                                        <Box sx={{ mb: 1 }}>
+707:                                                            <Box sx={{
+730:                                    <Box sx={{ mb: 3 }}>
+741:                                <Box>
+742:                                    <Box sx={{ mb: 3, borderRadius: '18px', overflow: 'hidden', border: '1px solid #e8f5e9', boxShadow: '0 4px 20px rgba(10,122,47,0.1)' }}>
+743:                                        <Box sx={{ height: '6px', background: 'linear-gradient(90deg, #0A7A2F, #F7931E, #0A7A2F)' }} />
+744:                                        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, bgcolor: 'white', display: 'flex', alignItems: 'center', gap: 3 }}>
+745:                                            <Box sx={{ width: { xs: 40, sm: 48 }, height: { xs: 40, sm: 48 }, borderRadius: '12px', bgcolor: '#e8f5e9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+748:                                            <Box>
+758:                                        <Box sx={{ px: 3, py: 2, bgcolor: '#f8fbf9', borderBottom: '1px solid #f0f0f0' }}>
+763:                                        <Box sx={{ px: 3, py: 1.5 }}>
+774:                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 2, borderRadius: '12px', bgcolor: '#fcfdfc', border: '1px solid rgba(10,122,47,0.08)', transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 4px 12px rgba(10,122,47,0.08)', bgcolor: 'white' } }}>
+775:                                                            <Box sx={{ bgcolor: '#f0f9f1', p: 1, borderRadius: '8px', display: 'flex' }}>{field.icon}</Box>
+776:                                                            <Box>
+788:                                        <Box sx={{ px: 2, py: 1.5, bgcolor: '#fffbed', borderBottom: '1px solid #f0f0f0' }}>
+793:                                        <Box sx={{ px: 2, py: 1.5, bgcolor: 'white' }}>
+794:                                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+795:                                                <Box sx={{ bgcolor: '#fff8e1', p: 1.5, borderRadius: '10px', display: 'flex' }}><HomeIcon sx={{ color: '#F7931E' }} /></Box>
+796:                                                <Box>
+810:                                <Box sx={{ bgcolor: 'white', borderRadius: '12px', p: 3, boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+811:                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+813:                                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+821:                                    <Box sx={{ borderBottom: 1, borderColor: '#f0f0f0', mb: 4 }}>
+833:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={40} sx={{ color: '#0A7A2F' }} /></Box>
+835:                                        <Box>
+838:                                                    <Box>
+873:                                                        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+896:                                                                                    <TableCell sx={{ borderBottom: 'none' }}><Box sx={{ display: 'inline-block', px: 1.5, py: 0.5, borderRadius: '6px', bgcolor: s.color, color: s.text, fontWeight: 800, fontSize: '11px', textTransform: 'uppercase' }}>{s.label}</Box></TableCell>
+900:                                                                                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+915:                                                        <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+923:                                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+924:                                                                            <Box>
+928:                                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: '4px', bgcolor: s.color, color: s.text, fontWeight: 800, fontSize: '10px', textTransform: 'uppercase' }}>{s.label}</Box>
+931:                                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+933:                                                                            <Box sx={{ display: 'flex', gap: 1 }}>
+956:                                <Box>
+990:                                    <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+994:                                        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+1022:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+1026:                                        <Box sx={{ textAlign: 'center', py: 5, bgcolor: 'white', borderRadius: '12px', border: '1px solid #ffcdd2', mb: 4 }}>
+1031:                                        <Box sx={{ textAlign: 'center', py: 5, bgcolor: 'white', borderRadius: '12px', border: '1px solid #eee', mb: 4 }}>
+1039:                                        <Box sx={{ mb: 4 }}>
+1041:                                            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+1059:                                                                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.5, py: 0.4, borderRadius: '6px', bgcolor: txn.txType === 'credit' ? '#e8f5e9' : '#fff3e0', color: txn.txType === 'credit' ? '#2e7d32' : '#e65100', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase' }}>
+1084:                                            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5 }}>
+1087:                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+1088:                                                            <Box sx={{ flex: 1 }}>
+1089:                                                                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1.2, py: 0.3, borderRadius: '5px', bgcolor: txn.txType === 'credit' ? '#e8f5e9' : '#fff3e0', color: txn.txType === 'credit' ? '#2e7d32' : '#e65100', fontWeight: 800, fontSize: '10px', textTransform: 'uppercase', mb: 0.5 }}>
+1115:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={36} sx={{ color: '#0A7A2F' }} /></Box>
+1117:                                        <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'white', borderRadius: '12px', border: '1px solid #eee', mb: 4 }}>
+1122:                                        <Box sx={{ mb: 4 }}>
+1128:                                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+1129:                                                            <Box sx={{ p: 2, bgcolor: '#f4faf5', borderRight: '1px solid #f0f0f0', display: 'flex', alignItems: 'center' }}>
+1130:                                                                <Box sx={{ width: 44, height: 44, borderRadius: '10px', bgcolor: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+1134:                                                            <Box sx={{ p: 2, flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+1135:                                                                <Box>
+1139:                                                                <Box sx={{ textAlign: 'right' }}>
+1157:                                            <Box sx={{ mb: 4 }}>
+1171:                                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'stretch' }}>
+1172:                                                            <Box sx={{
+1181:                                                                <Box sx={{
+1192:                                                            <Box sx={{ p: 2, flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+1193:                                                                <Box>
+1197:                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+1206:                                                                <Box sx={{ textAlign: 'right' }}>
+1233:                                            <Box sx={{ mb: 4 }}>
+1248:                                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'stretch' }}>
+1249:                                                            <Box sx={{
+1258:                                                                <Box sx={{
+1266:                                                            <Box sx={{ p: 2, flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+1267:                                                                <Box>
+1271:                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+1280:                                                                <Box sx={{ textAlign: 'right' }}>
+1302:                                        <Box sx={{ textAlign: 'center', py: 4, bgcolor: 'white', borderRadius: '12px', border: '1px solid #eee' }}>
+1316:                                <Box>
+1321:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={40} sx={{ color: '#0A7A2F' }} /></Box>
+1323:                                        <Box sx={{ textAlign: 'center', py: 4 }}>
+1335:                                                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, p: 0 }}>
+1336:                                                                <Box sx={{ p: 3, flex: 1.5 }}>
+1337:                                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+1345:                                                                    <Box sx={{ mt: 2.5, display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+1346:                                                                        <Box>
+1350:                                                                        <Box>
+1358:                                                                <Box sx={{ width: { xs: '100%', md: '200px' }, bgcolor: '#fafafa', borderLeft: { xs: 'none', md: '1px solid #eaeaea' }, borderTop: { xs: '1px solid #eaeaea', md: 'none' }, p: { xs: 2.5, sm: 3 }, display: 'flex', flexDirection: { xs: 'row', md: 'column' }, justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+1378:                                <Box>

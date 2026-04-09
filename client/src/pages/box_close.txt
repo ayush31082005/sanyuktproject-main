@@ -1,0 +1,119 @@
+360:                </Box>
+412:            </Box>
+442:                            </Box>
+455:                </Box>
+457:        </Box>
+469:                    </Box>
+525:                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><EmailIcon fontSize="small" /><Typography variant="body2">{formatValue(userData.email)}</Typography></Box>
+526:                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><PhoneIcon fontSize="small" /><Typography variant="body2">{formatValue(userData.mobile)}</Typography></Box>
+527:                                    </Box>
+528:                                </Box>
+529:                            </Box>
+534:                        </Box>
+545:                    </Box>
+572:                                    </Box>
+576:                                </Box>
+578:                        </Box>
+584:                            {tabValue === -1 && <Box><CartPage /></Box>}
+601:                                                            </Box>
+605:                                                </Box>
+609:                                                        <Box sx={{ bgcolor: '#e8f5e9', color: '#0A7A2F', fontWeight: 600, fontSize: '11px', px: 1.5, py: 0.25, borderRadius: '20px' }}>ID: {formatValue(userData.memberId)}</Box>
+610:                                                        <Box sx={{ bgcolor: '#fffbed', color: '#F7931E', fontWeight: 600, fontSize: '11px', px: 1.5, py: 0.25, borderRadius: '20px' }}>{formatValue(userData.position)}</Box>
+611:                                                    </Box>
+613:                                                </Box>
+614:                                            </Box>
+621:                                                </Box>
+623:                                        </Box>
+624:                                    </Box>
+630:                                        </Box>
+678:                                                                </Box>
+679:                                                            </Box>
+684:                                        </Box>
+693:                                        </Box>
+721:                                                            </Box>
+722:                                                        </Box>
+726:                                        </Box>
+735:                                    </Box>
+736:                                </Box>
+747:                                            </Box>
+753:                                            </Box>
+754:                                        </Box>
+755:                                    </Box>
+762:                                        </Box>
+775:                                                            <Box sx={{ bgcolor: '#f0f9f1', p: 1, borderRadius: '8px', display: 'flex' }}>{field.icon}</Box>
+779:                                                            </Box>
+780:                                                        </Box>
+784:                                        </Box>
+792:                                        </Box>
+795:                                                <Box sx={{ bgcolor: '#fff8e1', p: 1.5, borderRadius: '10px', display: 'flex' }}><HomeIcon sx={{ color: '#F7931E' }} /></Box>
+801:                                                </Box>
+802:                                            </Box>
+803:                                        </Box>
+805:                                </Box>
+818:                                        </Box>
+819:                                    </Box>
+830:                                    </Box>
+833:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress size={40} sx={{ color: '#0A7A2F' }} /></Box>
+841:                                                    </Box>
+896:                                                                                    <TableCell sx={{ borderBottom: 'none' }}><Box sx={{ display: 'inline-block', px: 1.5, py: 0.5, borderRadius: '6px', bgcolor: s.color, color: s.text, fontWeight: 800, fontSize: '11px', textTransform: 'uppercase' }}>{s.label}</Box></TableCell>
+905:                                                                                        </Box>
+913:                                                        </Box>
+927:                                                                            </Box>
+928:                                                                            <Box sx={{ px: 1, py: 0.25, borderRadius: '4px', bgcolor: s.color, color: s.text, fontWeight: 800, fontSize: '10px', textTransform: 'uppercase' }}>{s.label}</Box>
+929:                                                                        </Box>
+938:                                                                            </Box>
+939:                                                                        </Box>
+943:                                                        </Box>
+947:                                        </Box>
+949:                                </Box>
+1017:                                        </Box>
+1018:                                    </Box>
+1024:                                        </Box>
+1029:                                        </Box>
+1037:                                        </Box>
+1062:                                                                        </Box>
+1081:                                            </Box>
+1092:                                                                </Box>
+1097:                                                            </Box>
+1101:                                                        </Box>
+1104:                                            </Box>
+1105:                                        </Box>
+1115:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={36} sx={{ color: '#0A7A2F' }} /></Box>
+1120:                                        </Box>
+1132:                                                                </Box>
+1133:                                                            </Box>
+1138:                                                                </Box>
+1142:                                                                </Box>
+1143:                                                            </Box>
+1144:                                                        </Box>
+1148:                                        </Box>
+1190:                                                                </Box>
+1191:                                                            </Box>
+1204:                                                                    </Box>
+1205:                                                                </Box>
+1218:                                                                </Box>
+1219:                                                            </Box>
+1220:                                                        </Box>
+1223:                                            </Box>
+1264:                                                                </Box>
+1265:                                                            </Box>
+1278:                                                                    </Box>
+1279:                                                                </Box>
+1292:                                                                </Box>
+1293:                                                            </Box>
+1294:                                                        </Box>
+1297:                                            </Box>
+1309:                                        </Box>
+1311:                                </Box>
+1321:                                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={40} sx={{ color: '#0A7A2F' }} /></Box>
+1328:                                        </Box>
+1342:                                                                    </Box>
+1349:                                                                        </Box>
+1355:                                                                        </Box>
+1356:                                                                    </Box>
+1357:                                                                </Box>
+1365:                                                                </Box>
+1366:                                                            </Box>
+1373:                                </Box>
+1383:                                </Box>
+1386:                        </Box>
