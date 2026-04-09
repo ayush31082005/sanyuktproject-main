@@ -77,19 +77,6 @@ const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, us
                 </div>
             </div>
 
-            {/* Navigation Dots */}
-            <div className="absolute bottom-4 md:bottom-3 left-1/2 -translate-x-1/2 z-50 flex gap-3">
-                {heroSlides.map((_, index) => (
-                    <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
-                        className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full transition-all duration-500 border border-[#C8A96A]/40 ${currentSlide === index ? 'bg-[#C8A96A] w-8 md:w-10 ring-4 ring-[#C8A96A]/20' : 'bg-white/20 hover:bg-white/40'
-                            }`}
-                        aria-label={`Go to slide ${index + 1}`}
-                    />
-                ))}
-            </div>
-
             {/* Bottom edge fade */}
             <div className="absolute bottom-0 left-0 right-0 h-2 sm:h-12 bg-gradient-to-t from-[#0D0D0D] to-transparent z-20 pointer-events-none"></div>
         </section>
