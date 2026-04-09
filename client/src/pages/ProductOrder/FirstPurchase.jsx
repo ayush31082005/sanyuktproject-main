@@ -231,9 +231,9 @@ export default function PlaceOrderPage() {
                                     onChange={(e) => setPayFrom(e.target.value)}
                                     className={fieldClass}
                                 >
-                                    <option value="">Select E-Wallet</option>
-                                    <option value="main-wallet">Main Wallet</option>
-                                    <option value="income-wallet">Income Wallet</option>
+                                    <option value="">Select Wallet</option>
+                                    <option value="product-wallet">Product Wallet</option>
+                                    <option value="e-wallet">E-Wallet</option>
                                 </select>
                             </div>
 

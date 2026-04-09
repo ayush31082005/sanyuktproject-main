@@ -24,7 +24,7 @@ export default function ProductWalletRequest() {
     const [formData, setFormData] = useState({
         bankName: '',
         bankDetails: '',
-        paymentMode: 'Cash',
+        paymentMode: 'UPI',
         currentBalance: '0.00',
         requestFund: '',
         remark: 'ISHA357528',
@@ -72,7 +72,7 @@ export default function ProductWalletRequest() {
         setFormData({
             bankName: '',
             bankDetails: '',
-            paymentMode: 'Cash',
+            paymentMode: 'UPI',
             currentBalance: '0.00',
             requestFund: '',
             remark: 'ISHA357528',
@@ -122,12 +122,12 @@ export default function ProductWalletRequest() {
                                     onChange={handleChange}
                                     className={fieldClass}
                                 >
-                                    <option value="Cash">Cash</option>
+                                    <option value="IMPS">IMPS</option>
+                                    <option value="UPI">UPI</option>
                                     <option value="NEFT">NEFT</option>
                                     <option value="RTGS">RTGS</option>
-                                    <option value="IMPS">IMPS</option>
-                                    <option value="Cheque">Cheque</option>
                                     <option value="DD">DD</option>
+                                    <option value="Cheque">Cheque</option>
                                 </select>
                             </div>
 
