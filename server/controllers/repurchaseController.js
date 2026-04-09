@@ -3,6 +3,9 @@ const RepurchaseLevelIncome = require("../models/RepurchaseLevelIncome");
 const BinaryTree = require("../models/BinaryTree");
 const User = require("../models/User");
 const IncomeHistory = require("../models/IncomeHistory");
+const Order = require("../models/Order");
+const bcrypt = require("bcryptjs");
+const sendEmail = require("../utils/sendEmail");
 
 // ✅ FIX 3: Plan ke hisaab se sahi commission rates
 // Gen 1: 15%, Gen 2: 10%, Gen 3: 5%, Gen 4-7: 2.5%, Gen 8-12: 1.25%, Gen 13-20: 0.75%
@@ -39,12 +42,9 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
         const repurchase = await Repurchase.findById(repurchaseId);
         if (!repurchase) throw new Error("Repurchase not found");
 
-        // ✅ FIX 4: User.parent use kar rahe hain (BinaryTree.parentId nahi)
-        // Kyunki mlmController bhi user.parent se hi traverse karta hai
         const buyerUser = await User.findById(repurchase.userId);
         if (!buyerUser) throw new Error("Buyer user not found");
 
-        // ✅ FIX 5: user.parent se upar traverse karo (User model ka field)
         let currentParentId = buyerUser.parent;
         let generation = 1;
 
@@ -65,7 +65,6 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
                 });
 
                 if (!alreadyProcessed) {
-                    // ✅ RepurchaseLevelIncome record save karo
                     await RepurchaseLevelIncome.create({
                         userId: parentUser._id,
                         fromUserId: repurchase.userId,
@@ -77,7 +76,6 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
                         status: "credited",
                     });
 
-                    // ✅ Wallet + totalGenerationIncome update
                     await User.findByIdAndUpdate(parentUser._id, {
                         $inc: {
                             walletBalance: commissionAmount,
@@ -85,12 +83,11 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
                         },
                     });
 
-                    // ✅ FIX 6: IncomeHistory mein 'Repurchase' type use karo
                     await IncomeHistory.create({
                         userId: parentUser._id,
                         fromUserId: repurchase.userId,
                         amount: commissionAmount,
-                        type: "Repurchase",  // IncomeHistory enum mein add kiya hai
+                        type: "Repurchase",
                         level: generation,
                         description: `Generation ${generation} repurchase income (${config.percent}%) from ${buyerUser.memberId || buyerUser._id}`,
                     });
@@ -99,7 +96,6 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
                 }
             }
 
-            // Agle parent ki taraf jao
             currentParentId = parentUser.parent;
             generation++;
         }
@@ -108,6 +104,123 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
     } catch (error) {
         console.error("❌ processRepurchaseGenerationIncome Error:", error.message);
         throw error;
+    }
+};
+
+// ============================================================
+// PLACE REPURCHASE ORDER (NEW UI)
+// POST /api/repurchase/place
+// Body: { cart, payFrom, orderTo, shippingAddress, accountPassword, directSellerId }
+// ============================================================
+exports.placeRepurchaseOrder = async (req, res) => {
+    try {
+        const { cart, payFrom, orderTo, shippingAddress, accountPassword, directSellerId } = req.body;
+
+        // Validations
+        if (!cart || cart.length === 0)
+            return res.status(400).json({ message: "Cart empty hai, koi product select karo" });
+        if (!payFrom)
+            return res.status(400).json({ message: "Pay From wallet select karo" });
+        if (!shippingAddress || shippingAddress.trim() === '')
+            return res.status(400).json({ message: "Shipping address enter karo" });
+        if (!accountPassword)
+            return res.status(400).json({ message: "Account password enter karo" });
+
+        // Password verify
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const isMatch = await bcrypt.compare(accountPassword, user.password);
+        if (!isMatch) return res.status(401).json({ message: "Account password galat hai" });
+
+        // Total calculate karo
+        const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const totalBV = cart.reduce((sum, item) => sum + ((item.bv || 0) * item.quantity), 0);
+
+        // Wallet balance check aur deduct
+        if (payFrom === 'product-wallet') {
+            if ((user.productWalletBalance || 0) < totalAmount)
+                return res.status(400).json({
+                    message: `Product wallet mein insufficient balance. Available: ₹${user.productWalletBalance || 0}, Required: ₹${totalAmount}`
+                });
+            user.productWalletBalance -= totalAmount;
+        } else if (payFrom === 'e-wallet') {
+            if ((user.walletBalance || 0) < totalAmount)
+                return res.status(400).json({
+                    message: `E-wallet mein insufficient balance. Available: ₹${user.walletBalance || 0}, Required: ₹${totalAmount}`
+                });
+            user.walletBalance -= totalAmount;
+        } else {
+            return res.status(400).json({ message: "Invalid wallet selected" });
+        }
+
+        await user.save();
+
+        // Har product ke liye Repurchase + Order record banao
+        const createdRepurchases = [];
+        for (const item of cart) {
+            const productId = item._id || item.id;
+            const itemBV = item.bv || BV_PER_REPURCHASE;
+            const itemTotal = item.price * item.quantity;
+
+            // Order record
+            const order = await Order.create({
+                user: req.user._id,
+                product: productId,
+                quantity: item.quantity,
+                shippingInfo: { address: shippingAddress },
+                paymentMethod: payFrom === 'product-wallet' ? 'product-wallet' : 'e-wallet',
+                total: itemTotal,
+                subtotal: itemTotal,
+                bv: itemBV * item.quantity,
+                pv: (itemBV * item.quantity) / 1000,
+                orderType: 'repurchase',
+                orderTo: orderTo || 'self',
+                status: 'pending',
+                tracking: [{ status: 'pending', message: 'Repurchase order placed', timestamp: new Date() }]
+            });
+
+            // Repurchase record
+            const repurchase = await Repurchase.create({
+                userId: req.user._id,
+                orderId: order._id,
+                amount: itemTotal,
+                bv: itemBV * item.quantity || BV_PER_REPURCHASE,
+                status: 'completed',
+            });
+
+            createdRepurchases.push(repurchase);
+
+            // Generation income trigger (non-blocking)
+            exports.processRepurchaseGenerationIncome(repurchase._id).catch(err =>
+                console.error("❌ Generation income error:", err.message)
+            );
+        }
+
+        // Confirmation email (non-blocking)
+        try {
+            const orderIdShort = createdRepurchases[0]._id.toString().slice(-8).toUpperCase();
+            const productNames = cart.map(i => `${i.name} x${i.quantity}`).join(', ');
+            const subject = `Repurchase Confirmed: #${orderIdShort} - Sanyukt Parivaar`;
+            const text = `Dear ${user.userName || user.memberId},\n\nAapka repurchase order confirm ho gaya hai!\n\nOrder ID: #${orderIdShort}\nProducts: ${productNames}\nTotal Amount: ₹${totalAmount}\nPayment From: ${payFrom}\n\nThank you for choosing Sanyukt Parivaar!\nEmpowering Lives, Together.`;
+            sendEmail(user.email, subject, text).catch(err =>
+                console.error("❌ Email error:", err.message)
+            );
+        } catch (emailErr) {
+            console.error("❌ Email prep error:", emailErr.message);
+        }
+
+        res.status(201).json({
+            message: "Repurchase order successfully placed!",
+            repurchases: createdRepurchases,
+            totalAmount,
+            totalBV,
+            walletUsed: payFrom
+        });
+
+    } catch (error) {
+        console.error("❌ Repurchase order error:", error);
+        res.status(500).json({ message: "Repurchase order place karne mein error aaya" });
     }
 };
 

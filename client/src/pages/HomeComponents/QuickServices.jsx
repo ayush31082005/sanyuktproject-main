@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../../api';
 import {
     Store,
     ShoppingCart,
@@ -10,6 +11,8 @@ import {
     ChevronRight,
     MoreHorizontal
 } from 'lucide-react';
+
+const productPreviewImage = `${API_URL}/uploads/1774819816815.webp`;
 
 const QuickServices = () => {
     const navigate = useNavigate();
@@ -30,7 +33,7 @@ const QuickServices = () => {
             subtitle: 'PREMIUM RANGE',
             icon: <Package className="w-6 h-6" />,
             path: '/products',
-            bgImage: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+            bgImage: productPreviewImage,
             color: 'from-[#F5E6C8] to-[#C8A96A]'
         },
         {

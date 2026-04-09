@@ -1,12 +1,12 @@
 import React from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, userRole, handleNavigation }) => {
     // Background Image Mode, Text on Left Vacant Side
 
     return (
-        <section className="relative min-h-[calc(100vh-88px)] md:min-h-[calc(100vh-115px)] overflow-hidden bg-[#0D0D0D] flex items-center py-4 md:py-6 lg:py-8">
+        <section className="relative min-h-[410px] max-h-[500px] sm:min-h-[calc(100vh-88px)] sm:max-h-none md:min-h-[calc(100vh-115px)] overflow-hidden bg-[#0D0D0D] flex items-start sm:items-center pt-6 pb-2 sm:py-4 md:py-6 lg:py-8">
             <AnimatePresence mode="wait">
                 <Motion.div
                     key={currentSlide}
@@ -26,34 +26,14 @@ const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, us
                 </Motion.div>
             </AnimatePresence>
 
-            {/* Navigation Arrows */}
-            <div className="absolute inset-0 z-50 flex items-center justify-between p-4 md:p-8 pointer-events-none">
-                <Motion.button
-                    whileHover={{ scale: 1.1, backgroundColor: 'rgba(200, 169, 106, 0.4)' }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
-                    className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/5 border border-[#C8A96A]/20 flex items-center justify-center text-[#C8A96A] pointer-events-auto backdrop-blur-sm transition-all shadow-2xl"
-                >
-                    <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
-                </Motion.button>
-                <Motion.button
-                    whileHover={{ scale: 1.1, backgroundColor: 'rgba(200, 169, 106, 0.4)' }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
-                    className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-white/5 border border-[#C8A96A]/20 flex items-center justify-center text-[#C8A96A] pointer-events-auto backdrop-blur-sm transition-all shadow-2xl"
-                >
-                    <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
-                </Motion.button>
-            </div>
-
-            <div className="container mx-auto px-4 sm:px-6 relative z-40">
+            <div className="container mx-auto px-4 sm:px-6 relative z-40 pt-8 sm:pt-0">
                 <div className="max-w-4xl mx-auto">
                     {/* Content Side - Centered */}
                     <Motion.div
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ delay: 0.3, duration: 0.8 }}
-                        className="space-y-3 md:space-y-4 text-center"
+                        className="space-y-1.5 sm:space-y-3 md:space-y-4 text-center"
                     >
                         <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold leading-[1.08] text-[#F5E6C8] tracking-tight drop-shadow-2xl">
                             {heroSlides[currentSlide].title}
@@ -65,7 +45,7 @@ const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, us
                             {heroSlides[currentSlide].description}
                         </p>
 
-                        <div className="flex flex-wrap gap-3 md:gap-4 pt-4 md:pt-5 pb-8 md:pb-10 justify-center">
+                        <div className="flex flex-wrap gap-3 md:gap-4 pt-4 sm:pt-4 md:pt-5 pb-0 sm:pb-8 md:pb-10 justify-center">
                             <Motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -98,7 +78,7 @@ const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, us
             </div>
 
             {/* Navigation Dots */}
-            <div className="absolute bottom-2 md:bottom-3 left-1/2 -translate-x-1/2 z-50 flex gap-3">
+            <div className="absolute bottom-4 md:bottom-3 left-1/2 -translate-x-1/2 z-50 flex gap-3">
                 {heroSlides.map((_, index) => (
                     <button
                         key={index}
@@ -111,7 +91,7 @@ const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, us
             </div>
 
             {/* Bottom edge fade */}
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#0D0D0D] to-transparent z-20 pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-2 sm:h-12 bg-gradient-to-t from-[#0D0D0D] to-transparent z-20 pointer-events-none"></div>
         </section>
     );
 };

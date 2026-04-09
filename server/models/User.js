@@ -111,6 +111,14 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        productWalletBalance: {
+            type: Number,
+            default: 0
+        },
+        repurchaseWalletBalance: {
+            type: Number,
+            default: 0
+        },
         // Binary Tree Relationships
         parent: {
             type: mongoose.Schema.Types.ObjectId,

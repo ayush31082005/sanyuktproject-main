@@ -13,7 +13,7 @@ import {
 
 // Lazy load section components
 const HeroSection = React.lazy(() => import('./HomeComponents/HeroSection'));
-const RechargeSection = React.lazy(() => import('./HomeComponents/RechargeSection'));
+// const RechargeSection = React.lazy(() => import('./HomeComponents/RechargeSection'));
 const AboutSection = React.lazy(() => import('./HomeComponents/AboutSection'));
 const WhyChooseSection = React.lazy(() => import('./HomeComponents/WhyChooseSection'));
 const ProductsCarousel = React.lazy(() => import('./HomeComponents/ProductsCarousel'));
@@ -728,7 +728,7 @@ const HomePage = () => {
                     whyChoosePoints={whyChoosePoints}
                 />
 
-                <RechargeSection
+                {/* <RechargeSection
                     mobileNumber={mobileNumber}
                     setMobileNumber={setMobileNumber}
                     operator={operator}
@@ -745,7 +745,7 @@ const HomePage = () => {
                     plansLoading={plansLoading}
                     isDetectingOperator={isDetectingOperator}
                     hasTriedDetection={hasTriedDetection}
-                />
+                /> */}
 
                 <div className="w-full flex items-center justify-center gap-2 sm:gap-5 my-1 sm:my-2 px-4 sm:px-5">
                     <div className="hidden sm:block flex-1 max-w-[180px] h-px bg-gradient-to-r from-transparent via-[#b88a44] to-transparent" />

@@ -558,7 +558,7 @@ const Header = () => {
             <Box sx={{ px: 2, pb: 2, borderBottom: '1px solid rgba(201,168,76,0.3)', mb: 1 }}>
                 <LogoContainer onClick={() => handleNavigation('/')}>
                     {!logoError && (
-                        <LogoImage src="/logo.png?v=20260403d" alt="Sanyukt Parivaar Logo" onError={handleLogoError} />
+                        <LogoImage src="/logo1.png?v=20260409a" alt="Sanyukt Parivaar Logo" onError={handleLogoError} />
                     )}
                 </LogoContainer>
             </Box>
@@ -832,7 +832,7 @@ const Header = () => {
                         }}>
                             <LogoContainer onClick={() => handleNavigation('/')}>
                                 {!logoError && (
-                                    <LogoImage src="/logo.png?v=20260403d" alt="Sanyukt Parivaar Logo" onError={handleLogoError} />
+                                    <LogoImage src="/logo1.png?v=20260409a" alt="Sanyukt Parivaar Logo" onError={handleLogoError} />
                                 )}
                             </LogoContainer>
                         </Box>

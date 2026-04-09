@@ -216,7 +216,7 @@ const Footer = () => {
                     <Grid item xs={12} md={4}>
                         <LogoContainer onClick={() => handleNavigation('/')} sx={{ flexDirection: 'column', alignItems: 'flex-start', gap: '5px' }}>
                             {!logoError && (
-                                <LogoImage src="/logo.png?v=20260403d" alt="Sanyukt Parivaar Logo" onError={handleLogoError} />
+                                <LogoImage src="/logo1.png?v=20260409a" alt="Sanyukt Parivaar Logo" onError={handleLogoError} />
                             )}
                         </LogoContainer>
 
@@ -308,7 +308,7 @@ const Footer = () => {
                     <CopyrightText component="div">
                         © 2026 Sanyukt Parivaar & Rich Life Pvt.Ltd.. All Rights Reserved.
                     </CopyrightText>
-                    <CopyrightText component="div" sx={{ fontSize: '12px', display: 'flex', alignItems: 'center', opacity: 1, letterSpacing: '0.5px' }}>
+                    {/* <CopyrightText component="div" sx={{ fontSize: '12px', display: 'flex', alignItems: 'center', opacity: 1, letterSpacing: '0.5px' }}>
                         POWERED BY
                         <Link
                             href="https://aigrowthexa.com"
@@ -352,7 +352,7 @@ const Footer = () => {
                                 GROWTH EXA
                             </Box>
                         </Link>
-                    </CopyrightText>
+                    </CopyrightText> */}
                 </Box>
             </BottomBar>
         </FooterContainer>
