@@ -19,6 +19,8 @@ exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
                 userId: user._id,
                 sourceOrderId: orderId,
                 orderAmount: orderTotal,
+                orderPv: Number(pv || 0),
+                orderBv: Number(bv || 0),
             });
         }
 

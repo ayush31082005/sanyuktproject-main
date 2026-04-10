@@ -1,17 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-    Wallet,
-    Users,
-    ArrowRightLeft,
-    ShoppingBag,
-    BarChart3,
-    Network,
     Activity,
-    Package,
-    Trophy,
-    CreditCard,
+    ArrowLeftRight,
+    BadgeIndianRupee,
+    Boxes,
     CircleDollarSign,
+    CreditCard,
+    Layers3,
+    Network,
+    ShoppingBag,
+    UserRoundCheck,
+    Users,
+    Wallet,
 } from 'lucide-react';
 import api from '../api';
 import ProfileBanner from '../components/ProfileBanner';
@@ -19,379 +19,379 @@ import ProfileBanner from '../components/ProfileBanner';
 const firstNumber = (...values) => {
     for (const value of values) {
         if (value !== undefined && value !== null && value !== '') {
-            return Number(value);
+            const numeric = Number(value);
+            if (!Number.isNaN(numeric)) {
+                return numeric;
+            }
         }
     }
     return 0;
 };
 
-const formatMoney = (value) => firstNumber(value).toFixed(2);
-
-const formatPlain = (value) => firstNumber(value).toLocaleString('en-IN', {
-    maximumFractionDigits: 3,
-});
-
-const tileThemes = {
-    green: 'bg-[#37c96d]',
-    blue: 'bg-[#3ea2ef]',
-    red: 'bg-[#ef6166]',
-    orange: 'bg-[#f6a34e]',
+const toArray = (payload) => {
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload)) return payload;
+    return [];
 };
 
-const TileCard = ({ title, value, theme, icon: Icon, footer }) => (
-    <div className={`rounded border border-white/35 px-4 py-3 text-white shadow-sm ${theme}`}>
-        <div className="flex items-start justify-between gap-3">
+const formatMoney = (value) =>
+    firstNumber(value).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+const formatMetric = (value, digits = 2) =>
+    firstNumber(value).toLocaleString('en-IN', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    });
+
+const formatWhole = (value) =>
+    firstNumber(value).toLocaleString('en-IN', {
+        maximumFractionDigits: 0,
+    });
+
+const countPairs = (pv, unit) => Math.floor((firstNumber(pv) + 0.000001) / unit);
+
+const tilePalette = {
+    green: 'bg-[linear-gradient(135deg,#2fd36e_0%,#34c86b_100%)]',
+    blue: 'bg-[linear-gradient(135deg,#2e9df0_0%,#59b2f3_100%)]',
+    red: 'bg-[linear-gradient(135deg,#ef5b61_0%,#f67075_100%)]',
+    orange: 'bg-[linear-gradient(135deg,#f7a145_0%,#ffb05d_100%)]',
+};
+
+const StatTile = ({ title, value, footer, icon: Icon, color }) => (
+    <div className={`relative overflow-hidden rounded-[3px] border border-white/35 px-4 py-3 text-white shadow-[0_10px_26px_rgba(0,0,0,0.18)] ${color}`}>
+        <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
-                {Icon && <Icon size={16} className="mt-0.5 shrink-0 opacity-95" />}
-                <span className="text-[11px] font-bold uppercase tracking-[0.14em]">{title}</span>
+                {Icon ? <Icon size={15} className="shrink-0 opacity-95" /> : null}
+                <span className="text-[10px] font-black uppercase tracking-[0.18em]">{title}</span>
             </div>
-            <span className="text-[28px] font-black leading-none">{value}</span>
+            <span className="text-[30px] font-black leading-none">{value}</span>
         </div>
-        {footer && (
-            <div className="mt-2 text-right text-[9px] font-semibold uppercase tracking-[0.14em] text-white/90">
-                {footer}
-            </div>
-        )}
-    </div>
-);
-
-const PairCard = ({ title, leftLabel, rightLabel, leftValue, rightValue, theme }) => (
-    <div className={`rounded border border-white/35 px-4 py-3 text-white shadow-sm ${theme}`}>
-        <div className="text-center">
-            <div className="text-[28px] font-black leading-none">
-                {leftValue} / {rightValue}
-            </div>
-            <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/90">
-                {title}
-            </div>
-            <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/80">
-                {leftLabel} / {rightLabel}
-            </div>
+        <div className="relative mt-2 text-right text-[9px] font-bold uppercase tracking-[0.16em] text-white/90">
+            {footer}
         </div>
     </div>
 );
 
-const SectionPanel = ({ title, children }) => (
-    <div className="overflow-hidden rounded border border-[#d5d5d5] bg-white shadow-sm">
-        <div className="border-b border-[#d5d5d5] bg-[#f5f5f5] px-4 py-3">
-            <h3 className="text-[12px] font-black uppercase tracking-[0.16em] text-[#374151]">{title}</h3>
+const PairStrip = ({ title, leftValue, rightValue, color }) => (
+    <div className={`rounded-[3px] border border-white/35 px-4 py-4 text-center text-white shadow-[0_10px_26px_rgba(0,0,0,0.14)] ${color}`}>
+        <div className="text-[30px] font-black leading-none">
+            {leftValue} / {rightValue}
         </div>
-        <div className="p-4">{children}</div>
+        <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.16em] text-white/90">{title}</div>
     </div>
 );
 
-const recentActivities = [
-    'Welcome to the dashboard. Track wallet balances, network growth and daily movement from one place.',
-    'Use Product Order to place first purchase and repurchase orders from available wallets.',
-    'Matching, repurchase, wallet and generation reports can be checked from the sidebar sections.',
-];
+const NoticePanel = ({ notices }) => (
+    <div className="overflow-hidden rounded-[3px] border border-[#bfc4ca] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
+        <div className="bg-[#4f5c63] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+            Notifications
+        </div>
+        <div className="space-y-[1px] bg-[#d8dde1] p-[1px]">
+            {notices.map((notice, index) => (
+                <div key={`${notice}-${index}`} className="flex gap-3 bg-[#fbfbfb] px-3 py-3">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8f2ff] text-[#3b9df1]">
+                        <Activity size={12} />
+                    </div>
+                    <p className="text-[11px] leading-5 text-[#4b5563]">{notice}</p>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 const DashboardOverview = () => {
-    const navigate = useNavigate();
-    const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [userData, setUserData] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [matchingReport, setMatchingReport] = useState(null);
+    const [networkCounts, setNetworkCounts] = useState({
+        directs: 0,
+        left: 0,
+        right: 0,
+        downline: 0,
+        activeDirects: 0,
+    });
+    const [userData, setUserData] = useState(() => {
+        try {
+            const raw = localStorage.getItem('user');
+            return raw ? JSON.parse(raw) : null;
+        } catch {
+            return null;
+        }
+    });
 
     useEffect(() => {
-        let user = null;
+        const fetchDashboardData = async () => {
+            setLoading(true);
 
-        try {
-            const userStr = localStorage.getItem('user');
-            user = userStr ? JSON.parse(userStr) : null;
-        } catch (error) {
-            console.error('Error parsing user data from localStorage:', error);
-        }
-
-        setUserData(user);
-
-        const fetchStats = async () => {
             try {
-                const res = await api.get('/mlm/get-stats');
-                setStats(res.data || null);
+                const results = await Promise.allSettled([
+                    api.get('/mlm/get-stats'),
+                    api.get('/mlm/get-directs'),
+                    api.get('/mlm/get-team-list/left'),
+                    api.get('/mlm/get-team-list/right'),
+                    api.get('/mlm/get-team-list/all'),
+                    api.get('/mlm/matching-report/me'),
+                ]);
+
+                const statsPayload =
+                    results[0].status === 'fulfilled' ? results[0].value.data || null : null;
+                const directs = results[1].status === 'fulfilled' ? toArray(results[1].value.data) : [];
+                const leftTeam = results[2].status === 'fulfilled' ? toArray(results[2].value.data) : [];
+                const rightTeam = results[3].status === 'fulfilled' ? toArray(results[3].value.data) : [];
+                const allTeam = results[4].status === 'fulfilled' ? toArray(results[4].value.data) : [];
+                const matchingPayload =
+                    results[5].status === 'fulfilled' ? results[5].value.data?.data || results[5].value.data || null : null;
+
+                setStats(statsPayload);
+                setMatchingReport(matchingPayload);
+                setNetworkCounts({
+                    directs: directs.length,
+                    left: leftTeam.length,
+                    right: rightTeam.length,
+                    downline: allTeam.length || leftTeam.length + rightTeam.length,
+                    activeDirects: directs.filter((member) => member?.activeStatus).length,
+                });
             } catch (error) {
-                console.error('Error fetching MLM stats:', error);
+                console.error('Dashboard fetch error:', error);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchStats();
+        fetchDashboardData();
     }, []);
 
-    const dashboardValues = useMemo(() => {
-        const eWallet = firstNumber(stats?.walletBalance, userData?.walletBalance);
-        const productWallet = firstNumber(userData?.productWalletBalance);
-        const repurchaseWallet = firstNumber(userData?.repurchaseWalletBalance);
-        const generationWallet = firstNumber(userData?.generationWalletBalance, stats?.totalGenerationIncome);
-        const netCommission = firstNumber(stats?.totalGenerationIncome);
-        const totalPurchases = firstNumber(stats?.productPurchases);
-        const totalDownline = firstNumber(stats?.totalDownline);
-        const leftCount = firstNumber(stats?.totalLeft);
-        const rightCount = firstNumber(stats?.totalRight);
-        const directCount = firstNumber(stats?.directCount);
-        const pv = firstNumber(stats?.pv);
-        const bv = firstNumber(stats?.bv);
+    const viewModel = useMemo(() => {
+        const availableLeftPV = firstNumber(matchingReport?.availableLeftPV);
+        const availableRightPV = firstNumber(matchingReport?.availableRightPV);
+        const totalLeftPV = firstNumber(matchingReport?.totalLeftPV, stats?.leftPV);
+        const totalRightPV = firstNumber(matchingReport?.totalRightPV, stats?.rightPV);
+        const leftBV = firstNumber(matchingReport?.leftBV, stats?.leftBV);
+        const rightBV = firstNumber(matchingReport?.rightBV, stats?.rightBV);
 
         return {
-            eWallet,
-            productWallet,
-            repurchaseWallet,
-            generationWallet,
-            netCommission,
-            totalPurchases,
-            totalDownline,
-            leftCount,
-            rightCount,
-            directCount,
-            pv,
-            bv,
-            currentSilverLeft: firstNumber(stats?.currentSilverLeft),
-            currentSilverRight: firstNumber(stats?.currentSilverRight),
-            totalSilverLeft: firstNumber(stats?.totalSilverLeft),
-            totalSilverRight: firstNumber(stats?.totalSilverRight),
-            currentGoldLeft: firstNumber(stats?.currentGoldLeft),
-            currentGoldRight: firstNumber(stats?.currentGoldRight),
-            totalGoldLeft: firstNumber(stats?.totalGoldLeft),
-            totalGoldRight: firstNumber(stats?.totalGoldRight),
-            currentDiamondLeft: firstNumber(stats?.currentDiamondLeft),
-            currentDiamondRight: firstNumber(stats?.currentDiamondRight),
-            totalDiamondLeft: firstNumber(stats?.totalDiamondLeft),
-            totalDiamondRight: firstNumber(stats?.totalDiamondRight),
-            pvLeft: firstNumber(stats?.pvLeft),
-            pvRight: firstNumber(stats?.pvRight),
-            totalPvLeft: firstNumber(stats?.totalPvLeft),
-            totalPvRight: firstNumber(stats?.totalPvRight),
+            repurchaseWallet: firstNumber(userData?.repurchaseWalletBalance),
+            eWallet: firstNumber(stats?.walletBalance, userData?.walletBalance),
+            generationWallet: firstNumber(userData?.generationWalletBalance, stats?.totalGenerationIncome),
+            productWallet: firstNumber(userData?.productWalletBalance),
+            netCommission: firstNumber(stats?.totalGenerationIncome),
+            paidWithdrawals: firstNumber(userData?.paidWithdrawals),
+            downline: firstNumber(networkCounts.downline, stats?.totalDownline),
+            leftCount: firstNumber(networkCounts.left, stats?.totalLeft),
+            rightCount: firstNumber(networkCounts.right, stats?.totalRight),
+            activeDirects: firstNumber(networkCounts.activeDirects),
+            currentPvLeft: availableLeftPV,
+            currentPvRight: availableRightPV,
+            totalPvLeft: totalLeftPV,
+            totalPvRight: totalRightPV,
+            currentSilverLeft: countPairs(availableLeftPV, 0.25),
+            currentSilverRight: countPairs(availableRightPV, 0.25),
+            totalSilverLeft: countPairs(totalLeftPV, 0.25),
+            totalSilverRight: countPairs(totalRightPV, 0.25),
+            currentGoldLeft: countPairs(availableLeftPV, 0.5),
+            currentGoldRight: countPairs(availableRightPV, 0.5),
+            totalGoldLeft: countPairs(totalLeftPV, 0.5),
+            totalGoldRight: countPairs(totalRightPV, 0.5),
+            currentDiamondLeft: countPairs(availableLeftPV, 1),
+            currentDiamondRight: countPairs(availableRightPV, 1),
+            totalDiamondLeft: countPairs(totalLeftPV, 1),
+            totalDiamondRight: countPairs(totalRightPV, 1),
+            leftBV,
+            rightBV,
+            totalPurchases: firstNumber(stats?.productPurchases),
+            totalOrders: firstNumber(stats?.totalOrders),
+            matchedPV: firstNumber(matchingReport?.matchedPV, stats?.matchedPV),
         };
-    }, [stats, userData]);
+    }, [matchingReport, networkCounts, stats, userData]);
+
+    const notices = useMemo(() => {
+        const currentRank = stats?.rank || userData?.rank || 'Member';
+        return [
+            `Welcome ${userData?.userName || userData?.memberId || 'Member'}, your current rank is ${currentRank}.`,
+            `Network summary: ${formatWhole(viewModel.downline)} total team members with ${formatWhole(viewModel.activeDirects)} active directs.`,
+            `Current carry forward volume is ${formatMetric(viewModel.currentPvLeft)} PV on left and ${formatMetric(viewModel.currentPvRight)} PV on right.`,
+            `Total matched PV recorded so far is ${formatMetric(viewModel.matchedPV)} with ${formatWhole(viewModel.totalOrders)} total orders.`,
+        ];
+    }, [stats?.rank, userData?.rank, userData?.userName, userData?.memberId, viewModel]);
 
     if (loading) {
         return (
-            <div className="flex min-h-[60vh] items-center justify-center rounded border border-[#d5d5d5] bg-white">
-                <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#e5e7eb] border-t-[#0c8f37]"></div>
+            <div className="flex min-h-[68vh] items-center justify-center rounded-[3px] border border-[#d7d9dd] bg-white">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#d7d9dd] border-t-[#2e9df0]" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">
+                        Loading Dashboard
+                    </span>
+                </div>
             </div>
         );
     }
 
-    if (!userData) return null;
+    if (!userData) {
+        return null;
+    }
 
     return (
-        <div className="mx-auto max-w-[1500px]">
+        <div className="mx-auto max-w-[1520px]">
             <div className="grid gap-4 xl:grid-cols-[420px,minmax(0,1fr)]">
                 <div className="space-y-4">
-                    <ProfileBanner userData={userData} stats={stats} />
-
-                    <SectionPanel title="Member Snapshot">
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                            <div className="flex items-center justify-between rounded border border-[#d6d6d6] bg-[#fafafa] px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                    <ShoppingBag size={15} className="text-[#0c8f37]" />
-                                    <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#4b5563]">
-                                        Product Purchase
-                                    </span>
-                                </div>
-                                <span className="text-[16px] font-black text-[#111827]">Rs {formatMoney(dashboardValues.totalPurchases)}</span>
-                            </div>
-
-                            <div className="flex items-center justify-between rounded border border-[#d6d6d6] bg-[#fafafa] px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                    <Wallet size={15} className="text-[#3ea2ef]" />
-                                    <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#4b5563]">
-                                        E-Wallet
-                                    </span>
-                                </div>
-                                <span className="text-[16px] font-black text-[#111827]">Rs {formatMoney(dashboardValues.eWallet)}</span>
-                            </div>
-
-                            <div className="flex items-center justify-between rounded border border-[#d6d6d6] bg-[#fafafa] px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                    <BarChart3 size={15} className="text-[#f6a34e]" />
-                                    <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#4b5563]">
-                                        Total PV / BV
-                                    </span>
-                                </div>
-                                <span className="text-[16px] font-black text-[#111827]">
-                                    {formatPlain(dashboardValues.pv)} / {formatPlain(dashboardValues.bv)}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 pt-1">
-                                <button
-                                    onClick={() => navigate('/my-account/orders/first')}
-                                    className="rounded border border-[#f1b2b2] bg-[#ef4444] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#dc2626]"
-                                >
-                                    First Purchase
-                                </button>
-                                <button
-                                    onClick={() => navigate('/my-account/downline/directs')}
-                                    className="rounded border border-[#8dd9a6] bg-[#33c35f] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#26ad50]"
-                                >
-                                    My Downline
-                                </button>
-                            </div>
-                        </div>
-                    </SectionPanel>
+                    <ProfileBanner userData={userData} stats={stats} matchingReport={matchingReport} />
                 </div>
 
                 <div className="space-y-4">
-                    <div className="grid gap-3 lg:grid-cols-3">
-                        <TileCard
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <StatTile
                             title="Repurchase Wallet"
-                            value={formatMoney(dashboardValues.repurchaseWallet)}
+                            value={formatMoney(viewModel.repurchaseWallet)}
                             footer="Repurchase Wallet"
-                            theme={tileThemes.green}
+                            color={tilePalette.green}
                             icon={Wallet}
                         />
-                        <TileCard
+                        <StatTile
                             title="E-Wallet"
-                            value={formatMoney(dashboardValues.eWallet)}
+                            value={formatMoney(viewModel.eWallet)}
                             footer="E-Wallet"
-                            theme={tileThemes.blue}
+                            color={tilePalette.blue}
                             icon={CreditCard}
                         />
-                        <TileCard
+                        <StatTile
                             title="Generation Wallet"
-                            value={formatMoney(dashboardValues.generationWallet)}
+                            value={formatMoney(viewModel.generationWallet)}
                             footer="Generation Wallet"
-                            theme={tileThemes.red}
+                            color={tilePalette.red}
                             icon={CircleDollarSign}
                         />
-                    </div>
-
-                    <div className="grid gap-3 lg:grid-cols-3">
-                        <TileCard
+                        <StatTile
                             title="Product Wallet"
-                            value={formatMoney(dashboardValues.productWallet)}
+                            value={formatMoney(viewModel.productWallet)}
                             footer="Product Wallet"
-                            theme={tileThemes.green}
-                            icon={Package}
+                            color={tilePalette.green}
+                            icon={ShoppingBag}
                         />
-                        <TileCard
+                        <StatTile
                             title="Net Commission"
-                            value={formatMoney(dashboardValues.netCommission)}
+                            value={formatMoney(viewModel.netCommission)}
                             footer="Net Commission"
-                            theme={tileThemes.orange}
-                            icon={ArrowRightLeft}
+                            color={tilePalette.orange}
+                            icon={BadgeIndianRupee}
                         />
-                        <TileCard
+                        <StatTile
                             title="Paid Withdrawals"
-                            value={formatMoney(userData?.paidWithdrawals || 0)}
+                            value={formatMoney(viewModel.paidWithdrawals)}
                             footer="Paid Withdrawals"
-                            theme={tileThemes.red}
+                            color={tilePalette.red}
                             icon={Wallet}
                         />
                     </div>
 
-                    <div className="grid gap-3 lg:grid-cols-3">
-                        <TileCard
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <StatTile
                             title="Downline"
-                            value={String(dashboardValues.totalDownline)}
+                            value={formatWhole(viewModel.downline)}
                             footer="Downline"
-                            theme={tileThemes.blue}
+                            color={tilePalette.blue}
                             icon={Network}
                         />
-                        <TileCard
+                        <StatTile
                             title="Left"
-                            value={String(dashboardValues.leftCount)}
+                            value={formatWhole(viewModel.leftCount)}
                             footer="Left"
-                            theme={tileThemes.green}
+                            color={tilePalette.green}
                             icon={Users}
                         />
-                        <TileCard
+                        <StatTile
+                            title="Active Directs"
+                            value={formatWhole(viewModel.activeDirects)}
+                            footer="Active Directs"
+                            color={tilePalette.red}
+                            icon={UserRoundCheck}
+                        />
+                        <StatTile
                             title="Right"
-                            value={String(dashboardValues.rightCount || dashboardValues.directCount)}
+                            value={formatWhole(viewModel.rightCount)}
                             footer="Right"
-                            theme={tileThemes.orange}
+                            color={tilePalette.orange}
                             icon={Users}
                         />
+                        <StatTile
+                            title="Total Orders"
+                            value={formatWhole(viewModel.totalOrders)}
+                            footer="Orders"
+                            color={tilePalette.blue}
+                            icon={Boxes}
+                        />
+                        <StatTile
+                            title="Left / Right BV"
+                            value={`${formatWhole(viewModel.leftBV)} / ${formatWhole(viewModel.rightBV)}`}
+                            footer="Current BV"
+                            color={tilePalette.green}
+                            icon={ArrowLeftRight}
+                        />
                     </div>
 
-                    <div className="grid gap-3 lg:grid-cols-2">
-                        <PairCard
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <PairStrip
                             title="Today PV Left / Right"
-                            leftLabel="Today PV Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.pvLeft)}
-                            rightValue={formatPlain(dashboardValues.pvRight)}
-                            theme={tileThemes.blue}
+                            leftValue={formatMetric(viewModel.currentPvLeft)}
+                            rightValue={formatMetric(viewModel.currentPvRight)}
+                            color={tilePalette.blue}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Current Silver Left / Right"
-                            leftLabel="Current Silver Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.currentSilverLeft)}
-                            rightValue={formatPlain(dashboardValues.currentSilverRight)}
-                            theme={tileThemes.blue}
+                            leftValue={formatWhole(viewModel.currentSilverLeft)}
+                            rightValue={formatWhole(viewModel.currentSilverRight)}
+                            color={tilePalette.blue}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Total PV Left / Right"
-                            leftLabel="Total PV Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.totalPvLeft)}
-                            rightValue={formatPlain(dashboardValues.totalPvRight)}
-                            theme={tileThemes.green}
+                            leftValue={formatMetric(viewModel.totalPvLeft)}
+                            rightValue={formatMetric(viewModel.totalPvRight)}
+                            color={tilePalette.green}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Silver Total Left / Right"
-                            leftLabel="Silver Total Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.totalSilverLeft)}
-                            rightValue={formatPlain(dashboardValues.totalSilverRight)}
-                            theme={tileThemes.green}
+                            leftValue={formatWhole(viewModel.totalSilverLeft)}
+                            rightValue={formatWhole(viewModel.totalSilverRight)}
+                            color={tilePalette.green}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Current Gold Left / Right"
-                            leftLabel="Current Gold Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.currentGoldLeft)}
-                            rightValue={formatPlain(dashboardValues.currentGoldRight)}
-                            theme={tileThemes.orange}
+                            leftValue={formatWhole(viewModel.currentGoldLeft)}
+                            rightValue={formatWhole(viewModel.currentGoldRight)}
+                            color={tilePalette.orange}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Total Gold Left / Right"
-                            leftLabel="Total Gold Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.totalGoldLeft)}
-                            rightValue={formatPlain(dashboardValues.totalGoldRight)}
-                            theme={tileThemes.red}
+                            leftValue={formatWhole(viewModel.totalGoldLeft)}
+                            rightValue={formatWhole(viewModel.totalGoldRight)}
+                            color={tilePalette.red}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Current Diamond Left / Right"
-                            leftLabel="Current Diamond Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.currentDiamondLeft)}
-                            rightValue={formatPlain(dashboardValues.currentDiamondRight)}
-                            theme={tileThemes.blue}
+                            leftValue={formatWhole(viewModel.currentDiamondLeft)}
+                            rightValue={formatWhole(viewModel.currentDiamondRight)}
+                            color={tilePalette.blue}
                         />
-                        <PairCard
+                        <PairStrip
                             title="Total Diamond Left / Right"
-                            leftLabel="Total Diamond Left"
-                            rightLabel="Right"
-                            leftValue={formatPlain(dashboardValues.totalDiamondLeft)}
-                            rightValue={formatPlain(dashboardValues.totalDiamondRight)}
-                            theme={tileThemes.green}
+                            leftValue={formatWhole(viewModel.totalDiamondLeft)}
+                            rightValue={formatWhole(viewModel.totalDiamondRight)}
+                            color={tilePalette.green}
                         />
                     </div>
 
-                    <SectionPanel title="Notices">
-                        <div className="space-y-2">
-                            {recentActivities.map((item, index) => (
-                                <div
-                                    key={`${item}-${index}`}
-                                    className="flex items-start gap-3 rounded border border-[#dcdcdc] bg-[#fafafa] px-3 py-3"
-                                >
-                                    <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#e7f1ff] text-[#3ea2ef]">
-                                        <Activity size={13} />
-                                    </div>
-                                    <p className="text-[11px] leading-5 text-[#4b5563]">{item}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </SectionPanel>
+                    <NoticePanel notices={notices} />
 
-                    <div className="rounded border border-[#d5d5d5] bg-white px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">
+                    <div className="rounded-[3px] border border-[#cfd4da] bg-[#fafafa] px-4 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#64748b]">
                         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                             <span>Sanyukt Member Dashboard</span>
-                            <span className="text-[#0c8f37]">Rank: {stats?.rank || userData.rank || 'Member'}</span>
+                            <span className="text-[#0c8f37]">
+                                Rank: {stats?.rank || userData?.rank || 'Member'} | Matched PV: {formatMetric(viewModel.matchedPV)}
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -78,6 +78,15 @@ const FILTER_TO_PACKAGE = {
     diamond: MATCHING_PACKAGE_CONFIG["2699"],
 };
 
+const SUCCESSFUL_ORDER_STATUSES = [
+    "paid",
+    "processing",
+    "shipped",
+    "reached_store",
+    "out_for_delivery",
+    "delivered",
+];
+
 const toPvUnits = (value) => Math.max(0, Math.round(Number(value || 0) * 4));
 const fromPvUnits = (value) => Number((Number(value || 0) / 4).toFixed(2));
 const roundCurrency = (value) => Number(Number(value || 0).toFixed(2));
@@ -91,8 +100,23 @@ const normalizeMatchingFilter = (value) => {
     return FILTER_TO_LEDGER_TYPE[normalized] || null;
 };
 
-const resolvePackageByAmount = (amount) => {
+const resolvePackageByVolume = ({ pv = 0, bv = 0, amount = 0 }) => {
+    const numericPV = Number(pv || 0);
+    const numericBV = Number(bv || 0);
     const numericAmount = Number(amount || 0);
+
+    if (numericPV >= MATCHING_PACKAGE_CONFIG["2699"].pv || numericBV >= MATCHING_PACKAGE_CONFIG["2699"].bv) {
+        return MATCHING_PACKAGE_CONFIG["2699"];
+    }
+
+    if (numericPV >= MATCHING_PACKAGE_CONFIG["1299"].pv || numericBV >= MATCHING_PACKAGE_CONFIG["1299"].bv) {
+        return MATCHING_PACKAGE_CONFIG["1299"];
+    }
+
+    if (numericPV >= MATCHING_PACKAGE_CONFIG["599"].pv || numericBV >= MATCHING_PACKAGE_CONFIG["599"].bv) {
+        return MATCHING_PACKAGE_CONFIG["599"];
+    }
+
     return (
         Object.values(MATCHING_PACKAGE_CONFIG).find(
             (config) => Math.abs(Number(config.amount) - numericAmount) < 0.01
@@ -108,6 +132,9 @@ const getStartOfDay = () => {
     start.setHours(0, 0, 0, 0);
     return start;
 };
+
+const isSuccessfulOrderStatus = (status) =>
+    SUCCESSFUL_ORDER_STATUSES.includes(String(status || "").toLowerCase());
 
 const markOrderBinaryStatus = async ({
     orderId,
@@ -333,19 +360,27 @@ const processQualifiedFirstPurchase = async ({
     userId,
     sourceOrderId = null,
     orderAmount,
+    orderPv = 0,
+    orderBv = 0,
 }) => {
-    const packageConfig = resolvePackageByAmount(orderAmount);
+    const packageConfig = resolvePackageByVolume({
+        amount: orderAmount,
+        pv: orderPv,
+        bv: orderBv,
+    });
+    const qualifiedPV = Number(orderPv || packageConfig?.pv || 0);
+    const qualifiedBV = Number(orderBv || packageConfig?.bv || 0);
 
     if (!packageConfig) {
         await markOrderBinaryStatus({
             orderId: sourceOrderId,
             status: "skipped",
-            note: "Order amount does not match a qualifying binary package.",
+            note: "Order PV/BV does not match a qualifying binary package.",
         });
 
         return {
             processed: false,
-            reason: "non_qualifying_amount",
+            reason: "non_qualifying_volume",
         };
     }
 
@@ -360,7 +395,11 @@ const processQualifiedFirstPurchase = async ({
                 throw new Error("User not found");
             }
 
-            if (user.activeStatus && MATCHING_PACKAGE_CONFIG[user.packageType]) {
+            if (
+                user.activeStatus &&
+                MATCHING_PACKAGE_CONFIG[user.packageType] &&
+                user.firstPurchaseProcessedAt
+            ) {
                 result = {
                     processed: false,
                     reason: "user_already_active",
@@ -395,8 +434,8 @@ const processQualifiedFirstPurchase = async ({
             user.activeStatus = true;
             user.packageType = packageConfig.packageType;
             user.dailyCapping = packageConfig.capping;
-            user.bv = Number(user.bv || 0) + packageConfig.bv;
-            user.pv = Number(user.pv || 0) + packageConfig.pv;
+            user.bv = Number(user.bv || 0) + qualifiedBV;
+            user.pv = Number(user.pv || 0) + qualifiedPV;
             user.firstPurchaseOrderId = sourceOrderId || null;
             user.firstPurchaseProcessedAt = new Date();
 
@@ -405,8 +444,8 @@ const processQualifiedFirstPurchase = async ({
 
             const affectedUplineIds = await propagateBinaryVolume({
                 sourceUserId: user._id,
-                pv: packageConfig.pv,
-                bv: packageConfig.bv,
+                pv: qualifiedPV,
+                bv: qualifiedBV,
                 session,
             });
 
@@ -424,17 +463,17 @@ const processQualifiedFirstPurchase = async ({
             await markOrderBinaryStatus({
                 orderId: sourceOrderId,
                 status: "processed",
-                note: `Qualified ${packageConfig.name} first purchase processed successfully.`,
+                note: `Qualified ${packageConfig.name} first purchase processed successfully using ${qualifiedPV} PV.`,
                 packageType: packageConfig.packageType,
-                pv: packageConfig.pv,
+                pv: qualifiedPV,
                 session,
             });
 
             result = {
                 processed: true,
                 packageType: packageConfig.packageType,
-                pv: packageConfig.pv,
-                bv: packageConfig.bv,
+                pv: qualifiedPV,
+                bv: qualifiedBV,
                 affectedUplineIds,
                 matchingResults,
             };
@@ -444,6 +483,80 @@ const processQualifiedFirstPurchase = async ({
     } finally {
         await session.endSession();
     }
+};
+
+const syncEligibleFirstPurchasesForUser = async (userId) => {
+    const user = await User.findById(userId).select(
+        "_id activeStatus packageType firstPurchaseOrderId firstPurchaseProcessedAt"
+    );
+
+    if (!user) {
+        return null;
+    }
+
+    if (user.firstPurchaseOrderId && user.firstPurchaseProcessedAt) {
+        return null;
+    }
+
+    const candidateOrders = await Order.find({
+        user: user._id,
+        orderType: "first",
+        status: { $in: SUCCESSFUL_ORDER_STATUSES },
+        binaryProcessStatus: { $in: ["pending", "skipped", "failed"] },
+    })
+        .sort({ createdAt: 1 })
+        .lean();
+
+    for (const order of candidateOrders) {
+        const outcome = await processQualifiedFirstPurchase({
+            userId: user._id,
+            sourceOrderId: order._id,
+            orderAmount: Number(order.total || 0),
+            orderPv: Number(order.pv || 0),
+            orderBv: Number(order.bv || 0),
+        });
+
+        if (outcome?.processed) {
+            return outcome;
+        }
+    }
+
+    return null;
+};
+
+const syncEligibleFirstPurchases = async ({ userId = null, limit = 50 } = {}) => {
+    const query = {
+        orderType: "first",
+        status: { $in: SUCCESSFUL_ORDER_STATUSES },
+        binaryProcessStatus: { $in: ["pending", "skipped", "failed"] },
+    };
+
+    if (userId) {
+        query.user = userId;
+    }
+
+    const candidateOrders = await Order.find(query)
+        .sort({ createdAt: 1 })
+        .limit(limit)
+        .lean();
+
+    const results = [];
+    for (const order of candidateOrders) {
+        const outcome = await processQualifiedFirstPurchase({
+            userId: order.user,
+            sourceOrderId: order._id,
+            orderAmount: Number(order.total || 0),
+            orderPv: Number(order.pv || 0),
+            orderBv: Number(order.bv || 0),
+        });
+        results.push({
+            orderId: String(order._id),
+            userId: String(order.user),
+            outcome,
+        });
+    }
+
+    return results;
 };
 
 const processPendingMatchingForAllUsers = async () => {
@@ -464,6 +577,9 @@ const processPendingMatchingForAllUsers = async () => {
 };
 
 const getMatchingReportData = async ({ userId, filterType = null }) => {
+    await syncEligibleFirstPurchases();
+    await syncEligibleFirstPurchasesForUser(userId);
+
     const ledgerType = normalizeMatchingFilter(filterType);
     if (filterType && !ledgerType) {
         const error = new Error("Invalid matching type filter. Use silver, gold, or diamond.");
@@ -639,9 +755,13 @@ module.exports = {
     MATCHING_RULES,
     MATCHING_LEDGER_TYPES,
     FILTER_TO_PACKAGE,
+    SUCCESSFUL_ORDER_STATUSES,
+    isSuccessfulOrderStatus,
     normalizeMatchingFilter,
-    resolvePackageByAmount,
+    resolvePackageByVolume,
     processQualifiedFirstPurchase,
+    syncEligibleFirstPurchases,
+    syncEligibleFirstPurchasesForUser,
     applyMatchingBonusesForUser,
     processPendingMatchingForAllUsers,
     getMatchingReportData,
