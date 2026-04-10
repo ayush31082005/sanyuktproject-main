@@ -83,16 +83,16 @@ const QuickServices = () => {
 
                             {/* Content */}
                             <div className="absolute inset-0 p-2 flex flex-col items-center justify-center text-center z-10">
-                                <div className="mb-1.5">
+                                <div className="mb-2">
                                     <div className={`p-1.5 rounded-full bg-gradient-to-br ${service.color} text-[#0D0D0D] shadow-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
-                                        {React.cloneElement(service.icon, { className: "w-3 h-3" })}
+                                        {React.cloneElement(service.icon, { className: "w-4 h-4" })}
                                     </div>
                                 </div>
 
-                                <h3 className="text-[#F5E6C8] font-serif font-bold text-xs leading-tight group-hover:text-[#C8A96A] transition-colors mb-0.5">
+                                <h3 className="text-[#F5E6C8] font-serif font-bold text-sm md:text-base leading-tight group-hover:text-[#C8A96A] transition-colors mb-1">
                                     {service.title}
                                 </h3>
-                                <p className="text-[#C8A96A]/80 text-[6px] uppercase tracking-[0.12em] font-black italic">
+                                <p className="text-[#C8A96A]/80 text-[8px] md:text-[10px] uppercase tracking-[0.14em] font-black italic">
                                     {service.subtitle}
                                 </p>
                             </div>

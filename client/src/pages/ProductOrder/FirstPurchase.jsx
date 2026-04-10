@@ -1,11 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CreditCard, MapPin, PackagePlus, Receipt, ShoppingBag, UserRound } from 'lucide-react';
-
-const productsList = [
-    { id: 1, name: 'Paracetamol', price: 50, bv: 5 },
-    { id: 2, name: 'Vitamin C', price: 120, bv: 12 },
-    { id: 3, name: 'Protein Powder', price: 850, bv: 80 },
-];
+import api from '../../api';
 
 const sectionTitleClass = 'text-[13px] font-black uppercase tracking-[0.14em] text-[#C8A96A]';
 const fieldLabelClass = 'mb-2 block text-[11px] font-black uppercase tracking-[0.12em] text-[#F5E6C8]/70';
@@ -23,42 +18,76 @@ const SectionCard = ({ icon: Icon, title, children }) => (
     </div>
 );
 
+const getStoredUser = () => {
+    try {
+        const raw = localStorage.getItem('user');
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
 export default function PlaceOrderPage() {
+    const storedUser = getStoredUser();
+    const [productsList, setProductsList] = useState([]);
+    const [productsLoading, setProductsLoading] = useState(true);
     const [directSellerId, setDirectSellerId] = useState('');
-    const [name, setName] = useState('ISHA557528');
+    const [name] = useState(storedUser?.memberId || storedUser?.userName || '');
     const [selectedProduct, setSelectedProduct] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [cart, setCart] = useState([]);
-
     const [payFrom, setPayFrom] = useState('');
     const [orderTo, setOrderTo] = useState('');
-    const [shippingAddress, setShippingAddress] = useState('');
+    const [shippingAddress, setShippingAddress] = useState(storedUser?.shippingAddress || '');
     const [accountPassword, setAccountPassword] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [feedback, setFeedback] = useState({ type: '', message: '' });
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await api.get('/products');
+                setProductsList(Array.isArray(response.data) ? response.data : []);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                setFeedback({ type: 'error', message: 'Products load nahi ho pa rahe.' });
+            } finally {
+                setProductsLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     const addProduct = () => {
         if (!selectedProduct) return;
 
-        const product = productsList.find((p) => p.id === Number(selectedProduct));
+        const product = productsList.find((item) => item._id === selectedProduct);
         if (!product) return;
 
-        const existingIndex = cart.findIndex((item) => item.id === product.id);
+        const qty = Math.max(1, Number(quantity || 1));
+        const existingIndex = cart.findIndex((item) => item._id === product._id);
 
         if (existingIndex !== -1) {
             const updated = [...cart];
-            updated[existingIndex].quantity += Number(quantity);
+            updated[existingIndex].quantity += qty;
             setCart(updated);
         } else {
-            setCart([
-                ...cart,
+            setCart((prev) => [
+                ...prev,
                 {
-                    ...product,
-                    quantity: Number(quantity),
+                    _id: product._id,
+                    name: product.name,
+                    price: Number(product.price || 0),
+                    bv: Number(product.bv || 0),
+                    quantity: qty,
                 },
             ]);
         }
 
         setSelectedProduct('');
         setQuantity(1);
+        setFeedback({ type: '', message: '' });
     };
 
     const totalDP = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -67,28 +96,39 @@ export default function PlaceOrderPage() {
     const eWalletValue = 0;
     const netPayable = totalDP;
 
-    const handleOrder = (e) => {
+    const handleOrder = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
+        setFeedback({ type: '', message: '' });
 
-        const orderData = {
-            directSellerId,
-            name,
-            cart,
-            billing: {
-                dp: totalDP,
-                pv: totalPV,
-                productValue,
-                eWalletValue,
-                netPayable,
-            },
-            payFrom,
-            orderTo,
-            shippingAddress,
-            accountPassword,
-        };
+        try {
+            const { data } = await api.post('/orders/first-purchase', {
+                directSellerId,
+                cart,
+                payFrom,
+                orderTo,
+                shippingAddress,
+                accountPassword,
+            });
 
-        console.log('Order Data:', orderData);
-        alert('Order placed successfully');
+            setCart([]);
+            setPayFrom('');
+            setOrderTo('');
+            setAccountPassword('');
+            setDirectSellerId('');
+            setFeedback({
+                type: 'success',
+                message: data?.message || 'First purchase order place ho gaya.',
+            });
+        } catch (error) {
+            console.error('First purchase order error:', error);
+            setFeedback({
+                type: 'error',
+                message: error?.response?.data?.message || error?.message || 'Order place nahi ho paaya.',
+            });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const billingStats = [
@@ -127,12 +167,7 @@ export default function PlaceOrderPage() {
 
                         <div>
                             <label className={fieldLabelClass}>Name</label>
-                            <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className={`${fieldClass} bg-[#151515] text-white`}
-                            />
+                            <input type="text" value={name} readOnly className={`${fieldClass} bg-[#151515] text-white`} />
                         </div>
 
                         <div>
@@ -141,10 +176,11 @@ export default function PlaceOrderPage() {
                                 value={selectedProduct}
                                 onChange={(e) => setSelectedProduct(e.target.value)}
                                 className={fieldClass}
+                                disabled={productsLoading}
                             >
-                                <option value="">--Select Products--</option>
+                                <option value="">{productsLoading ? 'Loading products...' : '--Select Products--'}</option>
                                 {productsList.map((product) => (
-                                    <option key={product.id} value={product.id}>
+                                    <option key={product._id} value={product._id}>
                                         {product.name} - Rs {product.price}
                                     </option>
                                 ))}
@@ -167,7 +203,8 @@ export default function PlaceOrderPage() {
                         <button
                             type="button"
                             onClick={addProduct}
-                            className="rounded-2xl bg-[#C8A96A] px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d]"
+                            disabled={productsLoading}
+                            className="rounded-2xl bg-[#C8A96A] px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Add Product
                         </button>
@@ -206,7 +243,7 @@ export default function PlaceOrderPage() {
                                     </thead>
                                     <tbody>
                                         {cart.map((item) => (
-                                            <tr key={item.id} className="border-b border-white/5 last:border-b-0">
+                                            <tr key={item._id} className="border-b border-white/5 last:border-b-0">
                                                 <td className="px-4 py-3">{item.name}</td>
                                                 <td className="px-4 py-3">Rs {item.price}</td>
                                                 <td className="px-4 py-3">{item.bv}</td>
@@ -226,11 +263,7 @@ export default function PlaceOrderPage() {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className={fieldLabelClass}>Pay From</label>
-                                <select
-                                    value={payFrom}
-                                    onChange={(e) => setPayFrom(e.target.value)}
-                                    className={fieldClass}
-                                >
+                                <select value={payFrom} onChange={(e) => setPayFrom(e.target.value)} className={fieldClass}>
                                     <option value="">Select Wallet</option>
                                     <option value="product-wallet">Product Wallet</option>
                                     <option value="e-wallet">E-Wallet</option>
@@ -239,15 +272,11 @@ export default function PlaceOrderPage() {
 
                             <div>
                                 <label className={fieldLabelClass}>Order To</label>
-                                <select
-                                    value={orderTo}
-                                    onChange={(e) => setOrderTo(e.target.value)}
-                                    className={fieldClass}
-                                >
+                                <select value={orderTo} onChange={(e) => setOrderTo(e.target.value)} className={fieldClass}>
                                     <option value="">Select</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="franchise">Franchise</option>
                                     <option value="self">Self</option>
-                                    <option value="customer">Customer</option>
-                                    <option value="direct-seller">Direct Seller</option>
                                 </select>
                             </div>
                         </div>
@@ -279,13 +308,20 @@ export default function PlaceOrderPage() {
                             </div>
                         </div>
 
+                        {feedback.message && (
+                            <div className={`rounded-2xl border px-4 py-3 text-sm ${feedback.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-rose-500/20 bg-rose-500/10 text-rose-300'}`}>
+                                {feedback.message}
+                            </div>
+                        )}
+
                         <div className="flex justify-start pt-2">
                             <button
                                 type="submit"
-                                className="inline-flex items-center gap-2 rounded-2xl bg-[#C8A96A] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d]"
+                                disabled={submitting || cart.length === 0}
+                                className="inline-flex items-center gap-2 rounded-2xl bg-[#C8A96A] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <CreditCard size={16} />
-                                Order Now
+                                {submitting ? 'Placing...' : 'Order Now'}
                             </button>
                         </div>
                     </form>

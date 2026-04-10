@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BadgeIndianRupee, FileUp, Landmark, Receipt, WalletCards } from 'lucide-react';
+import api from '../../api';
 
 const sectionTitleClass = 'text-[13px] font-black uppercase tracking-[0.14em] text-[#C8A96A]';
 const fieldLabelClass = 'mb-2 block text-[11px] font-black uppercase tracking-[0.12em] text-[#F5E6C8]/70';
@@ -20,19 +21,57 @@ const SectionCard = ({ icon: Icon, title, children, rightSlot = null }) => (
     </div>
 );
 
+const getStoredUser = () => {
+    try {
+        const raw = localStorage.getItem('user');
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
+const formatCurrency = (value) => Number(value || 0).toFixed(2);
+
 export default function ProductWalletRequest() {
+    const storedUser = useMemo(() => getStoredUser(), []);
     const [formData, setFormData] = useState({
         bankName: '',
         bankDetails: '',
         paymentMode: 'UPI',
         currentBalance: '0.00',
         requestFund: '',
-        remark: 'ISHA357528',
+        remark: storedUser?.memberId || storedUser?.userName || '',
         password: '',
         attachment: null,
     });
-
     const [submittedData, setSubmittedData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [feedback, setFeedback] = useState({ type: '', message: '' });
+
+    const loadWalletData = async () => {
+        try {
+            const [summaryRes, historyRes] = await Promise.all([
+                api.get('/wallet/summary', { params: { walletType: 'product-wallet' } }),
+                api.get('/wallet/product/request-history'),
+            ]);
+
+            setFormData((prev) => ({
+                ...prev,
+                currentBalance: formatCurrency(summaryRes.data?.balance),
+            }));
+            setSubmittedData(historyRes.data?.requests || []);
+        } catch (error) {
+            console.error('Wallet request load error:', error);
+            setFeedback({ type: 'error', message: 'Wallet request data load nahi ho pa raha.' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadWalletData();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, files } = e.target;
@@ -40,7 +79,7 @@ export default function ProductWalletRequest() {
         if (name === 'attachment') {
             setFormData((prev) => ({
                 ...prev,
-                attachment: files[0] || null,
+                attachment: files?.[0] || null,
             }));
             return;
         }
@@ -51,34 +90,52 @@ export default function ProductWalletRequest() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setSubmitting(true);
+        setFeedback({ type: '', message: '' });
 
-        const newRequest = {
-            id: Date.now(),
-            bankName: formData.bankName,
-            bankDetails: formData.bankDetails,
-            paymentMode: formData.paymentMode,
-            currentBalance: formData.currentBalance,
-            requestFund: formData.requestFund,
-            remark: formData.remark,
-            password: formData.password,
-            attachmentName: formData.attachment ? formData.attachment.name : 'No File',
-            status: 'Pending',
-        };
+        try {
+            const payload = new FormData();
+            payload.append('bankName', formData.bankName);
+            payload.append('bankDetails', formData.bankDetails);
+            payload.append('paymentMode', formData.paymentMode);
+            payload.append('requestFund', formData.requestFund);
+            payload.append('remark', formData.remark);
+            payload.append('password', formData.password);
+            if (formData.attachment) {
+                payload.append('attachment', formData.attachment);
+            }
 
-        setSubmittedData((prev) => [newRequest, ...prev]);
+            const { data } = await api.post('/wallet/product/request', payload, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
 
-        setFormData({
-            bankName: '',
-            bankDetails: '',
-            paymentMode: 'UPI',
-            currentBalance: '0.00',
-            requestFund: '',
-            remark: 'ISHA357528',
-            password: '',
-            attachment: null,
-        });
+            setFeedback({
+                type: 'success',
+                message: data?.message || 'Wallet request submit ho gayi.',
+            });
+
+            setFormData((prev) => ({
+                ...prev,
+                bankName: '',
+                bankDetails: '',
+                paymentMode: 'UPI',
+                requestFund: '',
+                password: '',
+                attachment: null,
+            }));
+
+            await loadWalletData();
+        } catch (error) {
+            console.error('Wallet request submit error:', error);
+            setFeedback({
+                type: 'error',
+                message: error?.response?.data?.message || error?.message || 'Wallet request submit nahi ho paayi.',
+            });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -99,12 +156,7 @@ export default function ProductWalletRequest() {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className={fieldLabelClass}>Bank Name</label>
-                                <select
-                                    name="bankName"
-                                    value={formData.bankName}
-                                    onChange={handleChange}
-                                    className={fieldClass}
-                                >
+                                <select name="bankName" value={formData.bankName} onChange={handleChange} className={fieldClass}>
                                     <option value="">--Select Bank--</option>
                                     <option value="SBI">SBI</option>
                                     <option value="HDFC">HDFC</option>
@@ -116,12 +168,7 @@ export default function ProductWalletRequest() {
 
                             <div>
                                 <label className={fieldLabelClass}>Payment Mode</label>
-                                <select
-                                    name="paymentMode"
-                                    value={formData.paymentMode}
-                                    onChange={handleChange}
-                                    className={fieldClass}
-                                >
+                                <select name="paymentMode" value={formData.paymentMode} onChange={handleChange} className={fieldClass}>
                                     <option value="IMPS">IMPS</option>
                                     <option value="UPI">UPI</option>
                                     <option value="NEFT">NEFT</option>
@@ -145,13 +192,7 @@ export default function ProductWalletRequest() {
 
                             <div>
                                 <label className={fieldLabelClass}>Current Balance</label>
-                                <input
-                                    type="text"
-                                    name="currentBalance"
-                                    value={formData.currentBalance}
-                                    readOnly
-                                    className={`${fieldClass} bg-[#151515] text-white`}
-                                />
+                                <input type="text" name="currentBalance" value={formData.currentBalance} readOnly className={`${fieldClass} bg-[#151515] text-white`} />
                             </div>
 
                             <div>
@@ -171,13 +212,7 @@ export default function ProductWalletRequest() {
 
                             <div>
                                 <label className={fieldLabelClass}>Remark / Reference No.</label>
-                                <input
-                                    type="text"
-                                    name="remark"
-                                    value={formData.remark}
-                                    onChange={handleChange}
-                                    className={`${fieldClass} bg-[#151515] text-white`}
-                                />
+                                <input type="text" name="remark" value={formData.remark} onChange={handleChange} className={`${fieldClass} bg-[#151515] text-white`} />
                             </div>
 
                             <div>
@@ -210,23 +245,25 @@ export default function ProductWalletRequest() {
                                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-[#C8A96A] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d]">
                                         <Landmark size={16} />
                                         Choose File
-                                        <input
-                                            type="file"
-                                            name="attachment"
-                                            onChange={handleChange}
-                                            className="hidden"
-                                        />
+                                        <input type="file" name="attachment" onChange={handleChange} className="hidden" />
                                     </label>
                                 </div>
                             </div>
                         </div>
 
+                        {feedback.message && (
+                            <div className={`rounded-2xl border px-4 py-3 text-sm ${feedback.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border-rose-500/20 bg-rose-500/10 text-rose-300'}`}>
+                                {feedback.message}
+                            </div>
+                        )}
+
                         <div className="flex justify-start pt-2">
                             <button
                                 type="submit"
-                                className="rounded-2xl bg-[#C8A96A] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d]"
+                                disabled={submitting}
+                                className="rounded-2xl bg-[#C8A96A] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Submit Request
+                                {submitting ? 'Submitting...' : 'Submit Request'}
                             </button>
                         </div>
                     </form>
@@ -241,7 +278,11 @@ export default function ProductWalletRequest() {
                         </div>
                     }
                 >
-                    {submittedData.length === 0 ? (
+                    {loading ? (
+                        <div className="flex min-h-[180px] items-center justify-center rounded-[1.5rem] border border-dashed border-[#C8A96A]/14 bg-[#121212] px-6 text-center">
+                            <p className="text-sm text-[#F5E6C8]/50">Loading wallet requests...</p>
+                        </div>
+                    ) : submittedData.length === 0 ? (
                         <div className="flex min-h-[180px] items-center justify-center rounded-[1.5rem] border border-dashed border-[#C8A96A]/14 bg-[#121212] px-6 text-center">
                             <p className="text-sm text-[#F5E6C8]/50">No request history found.</p>
                         </div>
@@ -261,14 +302,22 @@ export default function ProductWalletRequest() {
                                     </thead>
                                     <tbody>
                                         {submittedData.map((item) => (
-                                            <tr key={item.id} className="border-b border-white/5 last:border-b-0">
+                                            <tr key={item._id} className="border-b border-white/5 last:border-b-0">
                                                 <td className="px-4 py-4">{item.bankName || '-'}</td>
                                                 <td className="px-4 py-4">{item.paymentMode}</td>
-                                                <td className="px-4 py-4">Rs {item.requestFund || '-'}</td>
+                                                <td className="px-4 py-4">Rs {formatCurrency(item.requestAmount)}</td>
                                                 <td className="px-4 py-4">{item.remark || '-'}</td>
-                                                <td className="px-4 py-4">{item.attachmentName}</td>
                                                 <td className="px-4 py-4">
-                                                    <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-300">
+                                                    {item.attachment ? (
+                                                        <a href={item.attachment} target="_blank" rel="noreferrer" className="text-[#C8A96A] underline">
+                                                            View
+                                                        </a>
+                                                    ) : (
+                                                        'No File'
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${item.status === 'Approved' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : item.status === 'Rejected' ? 'border border-rose-500/20 bg-rose-500/10 text-rose-300' : 'border border-amber-500/20 bg-amber-500/10 text-amber-300'}`}>
                                                         {item.status}
                                                     </span>
                                                 </td>

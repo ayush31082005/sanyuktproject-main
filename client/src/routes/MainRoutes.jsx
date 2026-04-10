@@ -94,6 +94,7 @@ import AdminGallery from '../pages/admin/Gallery.jsx'
 import AdminEvents from '../pages/admin/Events.jsx'
 import AdminNews from '../pages/admin/AdminNews.jsx'
 import AdminWithdrawals from '../pages/admin/Withdrawals.jsx'
+import AdminWalletRequests from '../pages/admin/WalletRequests.jsx'
 
 const MainRoutes = () => {
     return (
@@ -216,6 +217,7 @@ const MainRoutes = () => {
                 <Route path="users" element={<AdminUsers />} />
                 <Route path="products" element={<AdminProducts />} />
                 <Route path="withdrawals" element={<AdminWithdrawals />} />
+                <Route path="wallet-requests" element={<AdminWalletRequests />} />
                 <Route path="franchise" element={<AdminFranchise />} />
                 <Route path="grievance" element={<AdminGrievance />} />
                 <Route path="orders" element={<AdminOrders />} />

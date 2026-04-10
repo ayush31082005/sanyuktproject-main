@@ -26,18 +26,21 @@ const SelfRepurchaseIncome = () => {
     const [toDate, setToDate] = useState('');
     const [searched, setSearched] = useState(false);
     const [totalIncome, setTotalIncome] = useState(0);
+    const [totalBV, setTotalBV] = useState(0);
     const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await api.get('/repurchase/level-income');
+                const res = await api.get('/repurchase/self-income');
                 const data = res.data?.data || {};
-                setTotalIncome(data.totalLevelIncome || 0);
-                setTransactions(Array.isArray(data.recentTransactions) ? data.recentTransactions : []);
+                setTotalIncome(data.totalSelfRepurchase || 0);
+                setTotalBV(data.totalBV || 0);
+                setTransactions(Array.isArray(data.recentRepurchases) ? data.recentRepurchases : []);
             } catch (error) {
                 console.error('Error fetching self repurchase income:', error);
                 setTotalIncome(0);
+                setTotalBV(0);
                 setTransactions([]);
             } finally {
                 setLoading(false);
@@ -171,7 +174,7 @@ const SelfRepurchaseIncome = () => {
                             <div className="py-10 text-center text-sm text-[#ECFDF5]/55">Loading report...</div>
                         ) : filteredTransactions.length === 0 ? (
                             <div className="py-10 text-center text-sm text-[#ECFDF5]/55">
-                                {searched ? 'No self repurchase records found.' : 'No self repurchase income records available.'}
+                                {searched ? 'No self repurchase records found.' : 'No self repurchase records available.'}
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -180,9 +183,9 @@ const SelfRepurchaseIncome = () => {
                                         <tr className="bg-[#111111] text-[#10B981]">
                                             <th className="border border-[#10B981]/15 px-3 py-2">Transaction ID</th>
                                             <th className="border border-[#10B981]/15 px-3 py-2">Date</th>
-                                            <th className="border border-[#10B981]/15 px-3 py-2">From Member</th>
-                                            <th className="border border-[#10B981]/15 px-3 py-2">Generation</th>
-                                            <th className="border border-[#10B981]/15 px-3 py-2">Bonus Amount</th>
+                                            <th className="border border-[#10B981]/15 px-3 py-2">Order ID</th>
+                                            <th className="border border-[#10B981]/15 px-3 py-2">BV</th>
+                                            <th className="border border-[#10B981]/15 px-3 py-2">Repurchase Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -195,13 +198,13 @@ const SelfRepurchaseIncome = () => {
                                                     {formatDate(item.createdAt || item.date)}
                                                 </td>
                                                 <td className="border border-[#10B981]/10 px-3 py-2">
-                                                    {item.fromUserId?.userName || item.fromUserId?.name || 'N/A'}
+                                                    #{String(item.orderId?._id || item.orderId || item._id).slice(-8).toUpperCase()}
                                                 </td>
                                                 <td className="border border-[#10B981]/10 px-3 py-2">
-                                                    {item.generation ? `Gen ${item.generation}` : 'N/A'}
+                                                    {item.bv || 0}
                                                 </td>
                                                 <td className="border border-[#10B981]/10 px-3 py-2 text-[#10B981]">
-                                                    Rs {formatAmount(item.commissionAmount)}
+                                                    Rs {formatAmount(item.amount)}
                                                 </td>
                                             </tr>
                                         ))}
@@ -211,6 +214,12 @@ const SelfRepurchaseIncome = () => {
                         )}
                     </div>
                 </div>
+
+                {!loading && (
+                    <div className="mt-4 text-right text-xs uppercase tracking-[0.18em] text-[#10B981]/60">
+                        Total BV: {Number(totalBV || 0).toLocaleString('en-IN')}
+                    </div>
+                )}
             </div>
         </div>
     );

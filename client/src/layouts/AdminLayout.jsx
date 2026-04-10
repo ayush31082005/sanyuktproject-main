@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     Home, Users, Package, BarChart3, LogOut,
-    Menu, X, Search, Bell, ChevronDown, Shield, Newspaper, IndianRupee
+    Menu, X, Search, Bell, ChevronDown, Shield, Newspaper, IndianRupee, Wallet
 } from 'lucide-react';
 
 const AdminLayout = () => {
@@ -15,6 +15,7 @@ const AdminLayout = () => {
         { path: '/admin/users', label: 'Users', icon: Users },
         { path: '/admin/products', label: 'Products', icon: Package },
         { path: '/admin/withdrawals', label: 'Withdrawal Mgmt', icon: IndianRupee },
+        { path: '/admin/wallet-requests', label: 'Wallet Requests', icon: Wallet },
         { path: '/admin/franchise', label: 'Franchise', icon: BarChart3 },
         { path: '/admin/grievance', label: 'Grievance', icon: BarChart3 },
         { path: '/admin/orders', label: 'Orders', icon: Package },

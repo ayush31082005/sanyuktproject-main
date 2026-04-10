@@ -3,6 +3,14 @@ const Withdrawal = require('../models/Withdrawal');
 const Deduction = require('../models/Deduction');
 const IncomeHistory = require('../models/IncomeHistory');
 const Transaction = require('../models/Transaction');
+const WalletLedger = require('../models/WalletLedger');
+const WalletRequest = require('../models/WalletRequest');
+const bcrypt = require('bcryptjs');
+const {
+    getWalletBalance,
+    createWalletLedgerEntry,
+    normalizeWalletType,
+} = require('../utils/walletLedgerUtils');
 
 exports.getAllWithdrawals = async (req, res) => {
     try {
@@ -563,3 +571,273 @@ exports.updateWithdrawalStatus = async (req, res) => {
     }
 };
 
+exports.getWalletSummary = async (req, res) => {
+    try {
+        const walletType = normalizeWalletType(req.query.walletType || 'e-wallet');
+        const { balance } = await getWalletBalance(req.user._id, walletType);
+
+        const [summaryRows, records] = await Promise.all([
+            WalletLedger.aggregate([
+                { $match: { userId: req.user._id, walletType } },
+                {
+                    $group: {
+                        _id: '$txType',
+                        total: { $sum: '$amount' },
+                    },
+                },
+            ]),
+            WalletLedger.countDocuments({ userId: req.user._id, walletType }),
+        ]);
+
+        const totals = summaryRows.reduce(
+            (acc, row) => {
+                if (row._id === 'credit') acc.totalCredits = row.total;
+                if (row._id === 'debit') acc.totalDebits = row.total;
+                return acc;
+            },
+            { totalCredits: 0, totalDebits: 0 }
+        );
+
+        res.json({
+            success: true,
+            walletType,
+            balance,
+            totalCredits: totals.totalCredits,
+            totalDebits: totals.totalDebits,
+            totalRecords: records,
+        });
+    } catch (err) {
+        console.error('GetWalletSummary Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
+};
+
+exports.getWalletTransactions = async (req, res) => {
+    try {
+        const walletType = normalizeWalletType(req.params.walletType || req.query.walletType);
+        const query = {
+            userId: req.user._id,
+            walletType,
+        };
+
+        const fromDate = req.query.fromDate ? new Date(req.query.fromDate) : null;
+        const toDate = req.query.toDate ? new Date(req.query.toDate) : null;
+
+        if (fromDate || toDate) {
+            query.createdAt = {};
+            if (fromDate && !Number.isNaN(fromDate.getTime())) {
+                fromDate.setHours(0, 0, 0, 0);
+                query.createdAt.$gte = fromDate;
+            }
+            if (toDate && !Number.isNaN(toDate.getTime())) {
+                toDate.setHours(23, 59, 59, 999);
+                query.createdAt.$lte = toDate;
+            }
+        }
+
+        const [transactions, summary] = await Promise.all([
+            WalletLedger.find(query).sort({ createdAt: -1 }),
+            getWalletBalance(req.user._id, walletType),
+        ]);
+
+        res.json({
+            success: true,
+            walletType,
+            balance: summary.balance,
+            totalRecords: transactions.length,
+            transactions,
+        });
+    } catch (err) {
+        console.error('GetWalletTransactions Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
+};
+
+exports.createWalletRequest = async (req, res) => {
+    try {
+        const walletType = normalizeWalletType(req.params.walletType);
+        if (!['product-wallet', 'repurchase-wallet'].includes(walletType)) {
+            return res.status(400).json({ success: false, message: 'Invalid wallet type' });
+        }
+
+        const {
+            bankName = '',
+            bankDetails = '',
+            paymentMode = 'UPI',
+            requestFund,
+            remark = '',
+            password = '',
+        } = req.body;
+
+        const amount = Number(requestFund || 0);
+        if (!amount || amount <= 0) {
+            return res.status(400).json({ success: false, message: 'Valid request amount enter karo' });
+        }
+
+        const user = await User.findById(req.user._id).select('+password userName memberId email walletBalance productWalletBalance repurchaseWalletBalance');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        if (user.password) {
+            const passwordMatch = await bcrypt.compare(password, user.password);
+            if (!passwordMatch) {
+                return res.status(401).json({ success: false, message: 'Transaction / account password galat hai' });
+            }
+        }
+
+        const currentWallet = await getWalletBalance(user._id, walletType);
+
+        const walletRequest = await WalletRequest.create({
+            userId: user._id,
+            walletType,
+            bankName,
+            bankDetails,
+            paymentMode,
+            currentBalance: currentWallet.balance,
+            requestAmount: amount,
+            remark,
+            attachment: req.file ? `/uploads/${req.file.filename}` : '',
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Wallet request submitted successfully',
+            request: walletRequest,
+        });
+    } catch (err) {
+        console.error('CreateWalletRequest Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
+};
+
+exports.getWalletRequestHistory = async (req, res) => {
+    try {
+        const walletType = normalizeWalletType(req.params.walletType);
+        const requests = await WalletRequest.find({
+            userId: req.user._id,
+            walletType,
+        }).sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            walletType,
+            totalRecords: requests.length,
+            requests,
+        });
+    } catch (err) {
+        console.error('GetWalletRequestHistory Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
+};
+
+exports.getAllWalletRequests = async (req, res) => {
+    try {
+        const { status = 'All', walletType = 'All', search = '' } = req.query;
+        const query = {};
+
+        if (status && status !== 'All') {
+            query.status = status;
+        }
+
+        if (walletType && walletType !== 'All') {
+            query.walletType = normalizeWalletType(walletType);
+        }
+
+        if (search) {
+            const users = await User.find({
+                $or: [
+                    { userName: { $regex: search, $options: 'i' } },
+                    { memberId: { $regex: search, $options: 'i' } },
+                    { mobile: { $regex: search, $options: 'i' } },
+                    { email: { $regex: search, $options: 'i' } },
+                ],
+            }).select('_id');
+
+            const userIds = users.map((user) => user._id);
+
+            query.$or = [
+                { userId: { $in: userIds } },
+                { bankName: { $regex: search, $options: 'i' } },
+                { remark: { $regex: search, $options: 'i' } },
+                { paymentMode: { $regex: search, $options: 'i' } },
+            ];
+        }
+
+        const requests = await WalletRequest.find(query)
+            .populate('userId', 'userName memberId mobile email')
+            .populate('approvedBy', 'userName memberId')
+            .sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            requests,
+        });
+    } catch (err) {
+        console.error('GetAllWalletRequests Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
+};
+
+exports.updateWalletRequestStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, adminNote = '' } = req.body;
+
+        if (!['Approved', 'Rejected', 'Pending'].includes(status)) {
+            return res.status(400).json({ success: false, message: 'Invalid request status' });
+        }
+
+        const walletRequest = await WalletRequest.findById(id);
+        if (!walletRequest) {
+            return res.status(404).json({ success: false, message: 'Wallet request not found' });
+        }
+
+        if (walletRequest.status !== 'Pending' && status !== walletRequest.status) {
+            return res.status(400).json({
+                success: false,
+                message: `Request already ${walletRequest.status.toLowerCase()} hai`,
+            });
+        }
+
+        if (status === 'Approved' && walletRequest.status === 'Pending') {
+            await createWalletLedgerEntry({
+                userId: walletRequest.userId,
+                walletType: walletRequest.walletType,
+                txType: 'credit',
+                amount: walletRequest.requestAmount,
+                sourceType: 'wallet-request-approved',
+                sourceId: walletRequest._id,
+                description: `${walletRequest.walletType} request approved`,
+                meta: {
+                    paymentMode: walletRequest.paymentMode,
+                    bankName: walletRequest.bankName,
+                },
+            });
+
+            walletRequest.status = 'Approved';
+            walletRequest.adminNote = adminNote;
+            walletRequest.approvedBy = req.user._id;
+            walletRequest.approvedAt = new Date();
+        } else if (status === 'Rejected') {
+            walletRequest.status = 'Rejected';
+            walletRequest.adminNote = adminNote;
+            walletRequest.approvedBy = req.user._id;
+            walletRequest.approvedAt = new Date();
+        } else {
+            walletRequest.status = status;
+            walletRequest.adminNote = adminNote;
+        }
+
+        await walletRequest.save();
+
+        res.json({
+            success: true,
+            message: `Wallet request ${walletRequest.status.toLowerCase()} successfully`,
+            request: walletRequest,
+        });
+    } catch (err) {
+        console.error('UpdateWalletRequestStatus Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Server error' });
+    }
+};

@@ -6,6 +6,7 @@ const IncomeHistory = require("../models/IncomeHistory");
 const Order = require("../models/Order");
 const bcrypt = require("bcryptjs");
 const sendEmail = require("../utils/sendEmail");
+const { createWalletLedgerEntry, getWalletBalance, normalizeWalletType } = require("../utils/walletLedgerUtils");
 
 // ✅ FIX 3: Plan ke hisaab se sahi commission rates
 // Gen 1: 15%, Gen 2: 10%, Gen 3: 5%, Gen 4-7: 2.5%, Gen 8-12: 1.25%, Gen 13-20: 0.75%
@@ -76,9 +77,24 @@ exports.processRepurchaseGenerationIncome = async (repurchaseId) => {
                         status: "credited",
                     });
 
+                    await createWalletLedgerEntry({
+                        userId: parentUser._id,
+                        walletType: "e-wallet",
+                        txType: "credit",
+                        amount: commissionAmount,
+                        sourceType: "repurchase-generation-income",
+                        sourceId: repurchase._id,
+                        description: `Generation ${generation} repurchase income`,
+                        meta: {
+                            generation,
+                            fromUserId: repurchase.userId,
+                            repurchaseId: repurchase._id,
+                            commissionPercent: config.percent,
+                        },
+                    });
+
                     await User.findByIdAndUpdate(parentUser._id, {
                         $inc: {
-                            walletBalance: commissionAmount,
                             totalGenerationIncome: commissionAmount,
                         },
                     });
@@ -133,31 +149,32 @@ exports.placeRepurchaseOrder = async (req, res) => {
         const isMatch = await bcrypt.compare(accountPassword, user.password);
         if (!isMatch) return res.status(401).json({ message: "Account password galat hai" });
 
-        // Total calculate karo
-        const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const totalBV = cart.reduce((sum, item) => sum + ((item.bv || 0) * item.quantity), 0);
-
-        // Wallet balance check aur deduct
-        if (payFrom === 'product-wallet') {
-            if ((user.productWalletBalance || 0) < totalAmount)
-                return res.status(400).json({
-                    message: `Product wallet mein insufficient balance. Available: ₹${user.productWalletBalance || 0}, Required: ₹${totalAmount}`
-                });
-            user.productWalletBalance -= totalAmount;
-        } else if (payFrom === 'e-wallet') {
-            if ((user.walletBalance || 0) < totalAmount)
-                return res.status(400).json({
-                    message: `E-wallet mein insufficient balance. Available: ₹${user.walletBalance || 0}, Required: ₹${totalAmount}`
-                });
-            user.walletBalance -= totalAmount;
-        } else {
+        const normalizedWalletType = normalizeWalletType(payFrom);
+        if (!["product-wallet", "repurchase-wallet", "e-wallet"].includes(normalizedWalletType)) {
             return res.status(400).json({ message: "Invalid wallet selected" });
         }
 
-        await user.save();
+        // Total calculate karo
+        const totalAmount = cart.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0);
+        const totalBV = cart.reduce((sum, item) => sum + ((Number(item.bv || 0)) * Number(item.quantity || 0)), 0);
+
+        const currentWallet = await getWalletBalance(req.user._id, normalizedWalletType);
+        if (currentWallet.balance < totalAmount) {
+            const walletLabel =
+                normalizedWalletType === "product-wallet"
+                    ? "Product wallet"
+                    : normalizedWalletType === "repurchase-wallet"
+                        ? "Repurchase wallet"
+                        : "E-wallet";
+
+            return res.status(400).json({
+                message: `${walletLabel} mein insufficient balance. Available: Rs ${currentWallet.balance}, Required: Rs ${totalAmount}`,
+            });
+        }
 
         // Har product ke liye Repurchase + Order record banao
         const createdRepurchases = [];
+        const createdOrders = [];
         for (const item of cart) {
             const productId = item._id || item.id;
             const itemBV = item.bv || BV_PER_REPURCHASE;
@@ -169,16 +186,19 @@ exports.placeRepurchaseOrder = async (req, res) => {
                 product: productId,
                 quantity: item.quantity,
                 shippingInfo: { address: shippingAddress },
-                paymentMethod: payFrom === 'product-wallet' ? 'product-wallet' : 'e-wallet',
+                paymentMethod: normalizedWalletType,
                 total: itemTotal,
                 subtotal: itemTotal,
                 bv: itemBV * item.quantity,
                 pv: (itemBV * item.quantity) / 1000,
                 orderType: 'repurchase',
                 orderTo: orderTo || 'self',
+                directSellerId: directSellerId || "",
                 status: 'pending',
                 tracking: [{ status: 'pending', message: 'Repurchase order placed', timestamp: new Date() }]
             });
+
+            createdOrders.push(order);
 
             // Repurchase record
             const repurchase = await Repurchase.create({
@@ -196,6 +216,21 @@ exports.placeRepurchaseOrder = async (req, res) => {
                 console.error("❌ Generation income error:", err.message)
             );
         }
+
+        const walletLedger = await createWalletLedgerEntry({
+            userId: req.user._id,
+            walletType: normalizedWalletType,
+            txType: "debit",
+            amount: totalAmount,
+            sourceType: "repurchase-order",
+            sourceId: createdOrders[0]?._id || null,
+            description: `Repurchase order payment (${createdOrders.length} item(s))`,
+            meta: {
+                orderIds: createdOrders.map((order) => order._id),
+                orderTo: orderTo || "self",
+                directSellerId: directSellerId || "",
+            },
+        });
 
         // Confirmation email (non-blocking)
         try {
@@ -215,12 +250,60 @@ exports.placeRepurchaseOrder = async (req, res) => {
             repurchases: createdRepurchases,
             totalAmount,
             totalBV,
-            walletUsed: payFrom
+            walletUsed: normalizedWalletType,
+            balanceAfter: walletLedger.balanceAfter,
         });
 
     } catch (error) {
         console.error("❌ Repurchase order error:", error);
         res.status(500).json({ message: "Repurchase order place karne mein error aaya" });
+    }
+};
+
+// ============================================================
+// GET - Frontend ke liye: User ka self repurchase report
+// ============================================================
+exports.getSelfRepurchaseIncome = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const repurchaseOrders = await Order.find({ user: userId, orderType: "repurchase" })
+            .select("_id total bv createdAt status")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const repurchaseOrderIds = repurchaseOrders.map((order) => order._id);
+
+        const repurchases = await Repurchase.find({
+            userId,
+            orderId: { $in: repurchaseOrderIds },
+        })
+            .populate("orderId", "_id total bv status createdAt orderType")
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        const summary = repurchases.reduce(
+            (acc, item) => {
+                acc.totalAmount += Number(item.amount || 0);
+                acc.totalBV += Number(item.bv || 0);
+                acc.totalRecords += 1;
+                return acc;
+            },
+            { totalAmount: 0, totalBV: 0, totalRecords: 0 }
+        );
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalSelfRepurchase: summary.totalAmount,
+                totalBV: summary.totalBV,
+                totalRecords: summary.totalRecords,
+                recentRepurchases: repurchases,
+            },
+        });
+    } catch (error) {
+        console.error("GetSelfRepurchaseIncome Error:", error);
+        res.status(500).json({ success: false, message: error.message || "Server error" });
     }
 };
 
