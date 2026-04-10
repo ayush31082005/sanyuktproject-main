@@ -4,7 +4,10 @@ const { protect } = require("../middleware/authMiddleware");
 const {
     getMatchingBonusReport,
     getAllMatchingSummary,
+    getMatchingReport,
 } = require("../controllers/Matchingbonuscontroller");
+
+router.get("/matching-report/:userId", protect, getMatchingReport);
 
 // GET /api/mlm/matching-bonus/silver
 // GET /api/mlm/matching-bonus/gold

@@ -1,85 +1,44 @@
-
 const User = require("../models/User");
-const BinaryTree = require("../models/BinaryTree");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
 const sendEmail = require("../utils/sendEmail");
-const fs = require("fs");
-const path = require("path");
-const { findExtremePosition, distributeLevelIncome, distributeDirectIncome, updateTeamPV } = require("../utils/mlmUtils");
+const { distributeLevelIncome, distributeDirectIncome, updateTeamPV } = require("../utils/mlmUtils");
+const {
+    MlmServiceError,
+    ensureUserPlacementConsistency,
+    findUserByIdentifier,
+    registerUserUnderSponsor,
+    validateSponsorId
+} = require("../services/mlmService");
 
-const PACKAGE_DATA = {
-    "599": { bv: 250, pv: 0.25, capping: 2000 },
-    "1299": { bv: 500, pv: 0.5, capping: 4000 },
-    "2699": { bv: 1000, pv: 1, capping: 10000 }
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+const handleServiceError = (res, error, fallbackMessage) => {
+    if (error instanceof MlmServiceError) {
+        return res.status(error.statusCode).json({
+            success: false,
+            message: error.message,
+            details: error.details
+        });
+    }
+
+    console.error(fallbackMessage, error);
+    return res.status(500).json({
+        success: false,
+        message: "Server Error"
+    });
 };
-
-const generateOTP = () =>
-    Math.floor(100000 + Math.random() * 900000).toString();
-
 
 // ================= REGISTER =================
 exports.register = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { user, otp } = await registerUserUnderSponsor(req.body);
 
-        const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({ message: "Password must be at least 8 characters and contain at least one letter, one number, and one special symbol" });
-        }
-
-        let user = await User.findOne({ email });
-
-        if (user && user.isVerified)
-            return res.status(400).json({ message: "Email already exists" });
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const otp = generateOTP();
-
-        if (!user) {
-            const pkg = PACKAGE_DATA[req.body.packageType] || { bv: 0, pv: 0, capping: 0 };
-
-            // Generate Member ID
-            const generateMemberId = () => 'SPRL' + Math.floor(100000 + Math.random() * 900000).toString();
-            let newMemberId = generateMemberId();
-            while (await User.findOne({ memberId: newMemberId })) {
-                newMemberId = generateMemberId();
-            }
-
-            // MLM Placement Logic
-            let parentId = null;
-            let finalPosition = req.body.position;
-            if (req.body.sponsorId) {
-                const placement = await findExtremePosition(req.body.sponsorId, req.body.position || "Left");
-                if (placement) {
-                    parentId = placement.parentId;
-                    finalPosition = placement.position;
-                }
-            }
-
-            user = new User({
-                ...req.body,
-                memberId: newMemberId,
-                password: hashedPassword,
-                otp,
-                otpExpire: Date.now() + 5 * 60 * 1000,
-                parentId: parentId,
-                position: finalPosition,
-                bv: pkg.bv,
-                pv: pkg.pv,
-                dailyCapping: pkg.capping
-            });
-        } else {
-            user.password = hashedPassword;
-            user.otp = otp;
-            user.otpExpire = Date.now() + 5 * 60 * 1000;
-        }
-
-        await user.save();
-        console.log(`[AUTH] User saved, sending OTP to ${email}`);
+        console.log(`[AUTH] User saved, sending OTP to ${user.email}`);
 
         try {
-            await sendEmail(email, "Registration OTP", `Your OTP is ${otp}`);
+            await sendEmail(user.email, "Registration OTP", `Your OTP is ${otp}`);
         } catch (err) {
             console.error("[AUTH] Registration OTP Email Failed:", err.message);
             return res.status(502).json({
@@ -88,80 +47,55 @@ exports.register = async (req, res) => {
             });
         }
 
-        res.json({
+        return res.json({
             success: true,
             message: "OTP Sent to Email. Please check your inbox (and spam folder)."
         });
-
     } catch (error) {
-        console.error("Registration error:", error);
-        res.status(500).json({ message: "Server Error" });
+        return handleServiceError(res, error, "Registration error:");
     }
 };
-
 
 // ================= VERIFY OTP =================
 exports.verifyOtp = async (req, res) => {
     try {
         const { email, otp } = req.body;
+        const normalizedEmail = String(email || "").trim().toLowerCase();
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
 
-        if (!user || user.otp !== otp || user.otpExpire < Date.now())
+        if (!user || user.otp !== otp || user.otpExpire < Date.now()) {
             return res.status(400).json({ message: "Invalid or Expired OTP" });
+        }
 
         user.isVerified = true;
         user.otp = undefined;
         user.otpExpire = undefined;
         user.activeStatus = true;
+        await user.save();
 
-        // MLM Logic: Link child to parent and distribute income
         if (user.parentId) {
-            const parent = await User.findById(user.parentId);
-            if (parent) {
-                if (user.position.toLowerCase() === 'left') {
-                    parent.left = user._id;
-                } else {
-                    parent.right = user._id;
-                }
-                await parent.save();
-            }
-
-            // Distribute Incomes
+            await ensureUserPlacementConsistency(user._id);
             await distributeDirectIncome(user);
             await distributeLevelIncome(user);
             await updateTeamPV(user);
+        } else {
+            await ensureUserPlacementConsistency(user._id);
         }
 
-        // Create/Update BinaryTree record for the user themselves
-        const sponsorObj = await User.findOne({
-            memberId: (user.sponsorId || "").toUpperCase()
-        });
-        await BinaryTree.findOneAndUpdate(
-            { userId: user._id },
-            {
-                userId: user._id,
-                parentId: user.parentId,
-                sponsorId: sponsorObj?._id,
-                position: user.position || "Left"
-            },
-            { upsert: true, new: true }
-        );
+        const refreshedUser = await User.findById(user._id);
 
-        await user.save();
-
-        // Send Welcome Email
         const welcomeSubject = "Welcome to Sanyukt Parivaar";
-        const welcomeText = `Dear ${user.userName || 'Member'},\n\nCongratulations! Your account has been successfully verified.\n\nYour Member ID: ${user.memberId}\nRegistered Phone: ${user.mobile}\n\nYou can now log in to your dashboard and explore our services.\n\nThank you for joining Sanyukt Parivaar!`;
-        sendEmail(user.email, welcomeSubject, welcomeText).catch(err => console.error("Welcome Email Error:", err));
+        const welcomeText = `Dear ${refreshedUser.userName || "Member"},\n\nCongratulations! Your account has been successfully verified.\n\nYour Member ID: ${refreshedUser.memberId}\nRegistered Phone: ${refreshedUser.mobile}\n\nYou can now log in to your dashboard and explore our services.\n\nThank you for joining Sanyukt Parivaar!`;
+        sendEmail(refreshedUser.email, welcomeSubject, welcomeText).catch((err) => {
+            console.error("Welcome Email Error:", err);
+        });
 
-        res.json({ message: "Account Verified Successfully" });
+        return res.json({ message: "Account Verified Successfully" });
     } catch (error) {
-        console.error("verifyOtp error:", error);
-        res.status(500).json({ message: "Server Error" });
+        return handleServiceError(res, error, "verifyOtp error:");
     }
 };
-
 
 // ================= LOGIN =================
 exports.login = async (req, res) => {
@@ -170,25 +104,28 @@ exports.login = async (req, res) => {
 
         let user;
         if (email.match(/^[0-9a-fA-F]{24}$/)) {
-            user = await User.findOne({ $or: [{ email: email }, { _id: email }] });
-        } else if (email.toUpperCase().startsWith('SPRL') || email.toUpperCase().startsWith('SP')) {
+            user = await User.findOne({ $or: [{ email }, { _id: email }] });
+        } else if (email.toUpperCase().startsWith("SPRL") || email.toUpperCase().startsWith("SP")) {
             user = await User.findOne({ memberId: email.toUpperCase() });
         } else {
-            user = await User.findOne({ email: email });
+            user = await User.findOne({ email });
         }
 
-        if (!user)
+        if (!user) {
             return res.status(400).json({ message: "User not found" });
+        }
 
-        if (!user.isVerified)
+        if (!user.isVerified) {
             return res.status(400).json({ message: "Verify Email First" });
+        }
 
         const match = await bcrypt.compare(password, user.password);
 
-        if (!match)
+        if (!match) {
             return res.status(400).json({ message: "Wrong Password" });
+        }
 
-        const secret = process.env.JWT_SECRET || 'your-secret-key';
+        const secret = process.env.JWT_SECRET || "your-secret-key";
         console.log("Signing token with secret (prefix):", secret.substring(0, 5));
 
         const token = jwt.sign(
@@ -199,23 +136,21 @@ exports.login = async (req, res) => {
 
         console.log("Login SUCCESS for user:", user._id);
 
-        // Send Login Notification Email
         const loginSubject = "Login Notification - Sanyukt Parivaar";
-        const loginText = `Dear ${user.userName || 'Member'},\n\nYou have successfully logged into your Sanyukt Parivaar account on ${new Date().toLocaleString()}.\n\nIf this was not you, please contact support immediately.\n\nThank you for being part of our family!`;
-        sendEmail(user.email, loginSubject, loginText).catch(err => {
+        const loginText = `Dear ${user.userName || "Member"},\n\nYou have successfully logged into your Sanyukt Parivaar account on ${new Date().toLocaleString()}.\n\nIf this was not you, please contact support immediately.\n\nThank you for being part of our family!`;
+        sendEmail(user.email, loginSubject, loginText).catch((err) => {
             console.error("[AUTH] Login notification scan failure:", err.message);
             console.error("[AUTH] User Email intended:", user.email);
         });
 
-        res.json({
+        return res.json({
             message: "Login Success",
             token,
             user
         });
-
     } catch (error) {
-        console.error(`Login error:`, error);
-        res.status(500).json({ message: error.message });
+        console.error("Login error:", error);
+        return res.status(500).json({ message: error.message });
     }
 };
 
@@ -226,15 +161,15 @@ exports.forgotPassword = async (req, res) => {
         if (!email) {
             return res.status(400).json({ message: "Email is required" });
         }
-        const normalizedEmail = email.toLowerCase().trim();
 
+        const normalizedEmail = email.toLowerCase().trim();
         const user = await User.findOne({ email: normalizedEmail });
 
-        if (!user)
+        if (!user) {
             return res.status(400).json({ message: "User not found" });
+        }
 
         const otp = generateOTP();
-
         user.otp = otp;
         user.otpExpire = Date.now() + 5 * 60 * 1000;
 
@@ -251,40 +186,36 @@ exports.forgotPassword = async (req, res) => {
             });
         }
 
-        res.json({
+        return res.json({
             success: true,
             message: "OTP Sent for Reset. Please check your email."
         });
     } catch (error) {
         console.error(`[AUTH ERROR] Forgot password: ${error.message}`, error.stack);
-        console.error("Error in forgotPassword:", error);
 
-        // Return a more descriptive error if it's likely an email issue
-        if (error.message.includes('login') || error.message.includes('auth')) {
+        if (error.message.includes("login") || error.message.includes("auth")) {
             return res.status(500).json({ message: "Email service authentication failed. Please check server configuration." });
         }
 
-        res.status(500).json({ message: "Server Error. Please try again later." });
+        return res.status(500).json({ message: "Server Error. Please try again later." });
     }
 };
 
 // ================= PUBLIC PROFILE =================
 exports.publicProfile = async (req, res) => {
     try {
-        const { id } = req.params;
-        const user = await User.findOne({
-            $or: [
-                { memberId: id.toUpperCase() },
-                { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }
-            ].filter(query => query !== null && query !== undefined)
-        }).select("userName memberId");
+        const user = await findUserByIdentifier(req.params.id, {
+            select: "userName memberId",
+            lean: true
+        });
 
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
-        res.json({ success: true, user });
+
+        return res.json({ success: true, user });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        return handleServiceError(res, error, "publicProfile error:");
     }
 };
 
@@ -296,26 +227,26 @@ exports.resendOtp = async (req, res) => {
 
         const user = await User.findOne({ email: normalizedEmail });
 
-        if (!user)
+        if (!user) {
             return res.status(400).json({ message: "User not found" });
+        }
 
-        if (user.isVerified)
+        if (user.isVerified) {
             return res.status(400).json({ message: "User already verified" });
+        }
 
         const otp = generateOTP();
 
         user.otp = otp;
-        user.otpExpire = Date.now() + 5 * 60 * 1000; // 5 minutes
+        user.otpExpire = Date.now() + 5 * 60 * 1000;
 
         await user.save();
-
         await sendEmail(normalizedEmail, "Resend OTP", `Your new OTP is ${otp}`);
 
-        res.json({ message: "New OTP Sent Successfully" });
-
+        return res.json({ message: "New OTP Sent Successfully" });
     } catch (error) {
         console.error("[AUTH] Resend OTP Failed:", error.message);
-        res.status(500).json({ message: error.message || "Server Error" });
+        return res.status(500).json({ message: error.message || "Server Error" });
     }
 };
 
@@ -353,14 +284,13 @@ exports.resetPassword = async (req, res) => {
         await user.save();
         console.log(`[AUTH DEBUG] Password reset successful for ${normalizedEmail}. New hash starts with: ${hashedPassword.substring(0, 10)}`);
 
-        res.json({ message: "Password Reset Successful" });
+        return res.json({ message: "Password Reset Successful" });
     } catch (error) {
         console.error(`[AUTH ERROR] Password reset for ${req.body.email}: ${error.message}`);
         console.error("Error in resetPassword:", error);
-        res.status(500).json({ message: "Server Error" });
+        return res.status(500).json({ message: "Server Error" });
     }
 };
-
 
 // ================= CREATE ADMIN =================
 exports.createAdmin = async (req, res) => {
@@ -368,8 +298,9 @@ exports.createAdmin = async (req, res) => {
         const { email, password } = req.body;
 
         const existing = await User.findOne({ email });
-        if (existing)
+        if (existing) {
             return res.status(400).json({ message: "Admin already exists" });
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -382,45 +313,43 @@ exports.createAdmin = async (req, res) => {
 
         await admin.save();
 
-        res.json({ message: "Admin Created Successfully" });
-
+        return res.json({ message: "Admin Created Successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Server Error" });
+        return res.status(500).json({ message: "Server Error" });
     }
 };
-
 
 // ================= PROFILE =================
 exports.profile = async (req, res) => {
     try {
-        let user = req.user;
+        const user = req.user;
+
         if (!user.memberId) {
-            const generateMemberId = () => 'SPRL' + Math.floor(100000 + Math.random() * 900000).toString();
-            let newMemberId = generateMemberId();
+            let newMemberId = `SPRL${Math.floor(100000 + Math.random() * 900000)}`;
             while (await User.findOne({ memberId: newMemberId })) {
-                newMemberId = generateMemberId();
+                newMemberId = `SPRL${Math.floor(100000 + Math.random() * 900000)}`;
             }
             user.memberId = newMemberId;
             await user.save();
         }
-        res.json(user);
+
+        return res.json(user);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
-
 
 // ================= UPDATE PROFILE =================
 exports.updateProfile = async (req, res) => {
     try {
         const allowedFields = [
-            'userName', 'fatherName', 'mobile', 'gender', 'position',
-            'shippingAddress', 'state', 'district', 'assemblyArea',
-            'block', 'villageCouncil', 'village', 'profileImage', 'bankDetails'
+            "userName", "fatherName", "mobile", "gender", "position",
+            "shippingAddress", "state", "district", "assemblyArea",
+            "block", "villageCouncil", "village", "profileImage", "bankDetails"
         ];
 
         const updates = {};
-        allowedFields.forEach(field => {
+        allowedFields.forEach((field) => {
             if (req.body[field] !== undefined) updates[field] = req.body[field];
         });
 
@@ -428,11 +357,11 @@ exports.updateProfile = async (req, res) => {
             req.user._id,
             { $set: updates },
             { new: true, runValidators: false }
-        ).select('-password -otp -otpExpire');
+        ).select("-password -otp -otpExpire");
 
-        res.json({ message: 'Profile updated successfully', user });
+        return res.json({ message: "Profile updated successfully", user });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
 
@@ -442,11 +371,11 @@ exports.submitKyc = async (req, res) => {
         const { aadharNumber, panNumber, nominee, bankDetails, kycDocuments } = req.body;
 
         if (!aadharNumber || !panNumber || !bankDetails?.accountNumber || !nominee?.name || !nominee?.relation) {
-            return res.status(400).json({ message: 'Aadhar, PAN, bank details, nominee name and nominee relation are required' });
+            return res.status(400).json({ message: "Aadhar, PAN, bank details, nominee name and nominee relation are required" });
         }
 
         const updates = {
-            kycStatus: 'Submitted',
+            kycStatus: "Submitted",
             aadharNumber,
             panNumber,
             nominee,
@@ -458,29 +387,20 @@ exports.submitKyc = async (req, res) => {
             req.user._id,
             { $set: updates },
             { new: true, runValidators: false }
-        ).select('-password -otp -otpExpire');
+        ).select("-password -otp -otpExpire");
 
-        res.json({ message: 'KYC submitted successfully', user });
+        return res.json({ message: "KYC submitted successfully", user });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return res.status(500).json({ message: error.message });
     }
 };
+
 // ================= GET SPONSOR NAME =================
 exports.getSponsorName = async (req, res) => {
     try {
-        const { id } = req.params;
-        const user = await User.findOne({
-            $or: [
-                { memberId: id.toUpperCase() },
-                { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }
-            ]
-        }).select("userName");
-
-        if (!user) {
-            return res.status(404).json({ message: "Sponsor not found" });
-        }
-        res.json({ name: user.userName });
+        const sponsor = await validateSponsorId(req.params.id);
+        return res.json({ name: sponsor.userName || "" });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        return handleServiceError(res, error, "getSponsorName error:");
     }
 };

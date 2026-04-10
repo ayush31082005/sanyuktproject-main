@@ -1,205 +1,133 @@
-const mongoose = require("mongoose");
-const User = require("../models/User");
-const IncomeHistory = require("../models/IncomeHistory");
-const BinaryTree = require("../models/BinaryTree");
+const {
+    FILTER_TO_PACKAGE,
+    getMatchingReportData,
+    normalizeMatchingFilter,
+} = require("../services/matchingService");
 
-// ─── Package Config ───────────────────────────────────────────────────────────
-const PACKAGE_CONFIG = {
-    "599": {
-        name: "Silver",
-        bv: 250,
-        pv: 0.25,
-        capping: 2000,
-        rate: 100,   // ₹100 per 0.25 PV matched
-        color: "silver",
-    },
-    "1299": {
-        name: "Gold",
-        bv: 500,
-        pv: 0.5,
-        capping: 4000,
-        rate: 200,
-        color: "gold",
-    },
-    "2699": {
-        name: "Diamond",
-        bv: 1000,
-        pv: 1,
-        capping: 10000,
-        rate: 400,
-        color: "diamond",
-    },
+const getRateForFilter = (filter) => {
+    if (filter === "diamond") return 400;
+    if (filter === "gold") return 200;
+    return 100;
 };
 
-// ─── Helper: get package type from filter string ──────────────────────────────
-const FILTER_MAP = {
-    silver: "599",
-    gold: "1299",
-    diamond: "2699",
-};
-
-/**
- * GET /api/mlm/matching-bonus/:type
- * type = silver | gold | diamond
- *
- * Returns:
- *  - Summary stats (totalEarned, thisMonth, todayEarned, cappingUsed, cappingLimit, carryForwardBV)
- *  - history[] array of matching income transactions
- */
 exports.getMatchingBonusReport = async (req, res) => {
     try {
-        const { type } = req.params; // silver | gold | diamond
-        const userId = req.user._id;
+        const type = String(req.params.type || "").toLowerCase();
+        const config = FILTER_TO_PACKAGE[type];
 
-        const packageKey = FILTER_MAP[type?.toLowerCase()];
-        if (!packageKey) {
-            return res.status(400).json({ success: false, message: "Invalid bonus type. Use silver, gold or diamond." });
+        if (!config) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid bonus type. Use silver, gold or diamond.",
+            });
         }
 
-        const config = PACKAGE_CONFIG[packageKey];
-
-        // Fetch user
-        const user = await User.findById(userId).select(
-            "packageType walletBalance leftTeamPV rightTeamPV matchedPV totalMatchingBonus dailyCapping activeStatus pv"
-        );
-
-        if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-        // Only show data if user has THIS package type (or allow viewing all)
-        // (Show empty stats with correct config if user is on different package)
-        const userHasPackage = user.packageType === packageKey;
-
-        // ── Fetch matching income history for this user ───────────────────────
-        const history = await IncomeHistory.find({
-            userId,
-            type: "Matching",
-        })
-            .sort({ createdAt: -1 })
-            .limit(100)
-            .lean();
-
-        // ── Calculate summary stats using aggregation for accuracy ───────────
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        const totals = await IncomeHistory.aggregate([
-            { $match: { userId: new mongoose.Types.ObjectId(userId), type: "Matching" } },
-            {
-                $group: {
-                    _id: null,
-                    total: { $sum: "$amount" },
-                    month: {
-                        $sum: {
-                            $cond: [{ $gte: ["$createdAt", startOfMonth] }, "$amount", 0],
-                        },
-                    },
-                    today: {
-                        $sum: {
-                            $cond: [{ $gte: ["$createdAt", startOfDay] }, "$amount", 0],
-                        },
-                    },
-                },
-            },
-        ]);
-
-        const totalEarned = totals[0]?.total || 0;
-        const thisMonth = totals[0]?.month || 0;
-        const todayEarned = totals[0]?.today || 0;
-
-        // BinaryTree for carry-forward BV
-        const tree = await BinaryTree.findOne({ userId }).lean();
-        
-        // Ensure we show values in BV for consistency (1 PV = 1000 BV)
-        // If leftTeamPV is 0.25, we show 250 BV
-        const leftBV = tree?.leftBV ? tree.leftBV : (user.leftTeamPV * 1000) || 0;
-        const rightBV = tree?.rightBV ? tree.rightBV : (user.rightTeamPV * 1000) || 0;
-        const matchedPV = tree?.matchedPV || user.matchedPV || 0;
-
-        // Carry forward is the balance after matching (usually one side is 0)
-        const carryForwardBV = Math.max(leftBV, rightBV);
-
-        const cappingLimit = config.capping;
-        const cappingUsed = Math.min(todayEarned, cappingLimit);
-
-        // ── Format history rows ───────────────────────────────────────────────
-        const formattedHistory = history.map((h) => ({
-            _id: h._id,
-            date: h.createdAt,
-            description: h.description || "Matching Bonus",
-            matchedPV: extractMatchedPV(h.description),
-            bonusAmount: h.amount,
-            status: "credited",
-        }));
+        const report = await getMatchingReportData({
+            userId: req.user._id,
+            filterType: type,
+        });
 
         return res.json({
             success: true,
             data: {
-                packageType: packageKey,
+                packageType: config.packageType,
                 packageName: config.name,
-                userHasPackage,
-                activeStatus: user.activeStatus,
-
-                // Summary cards
-                totalEarned,
-                thisMonth,
-                todayEarned,
-                cappingUsed,
-                cappingLimit,
-                carryForwardBV,
-
-                // Left / Right legs (Show volume even if user doesn't have package)
-                leftBV,
-                rightBV,
-                matchedPV,
-                personalPV: user.pv || 0,
-
-                // Config for frontend
+                userHasPackage: report.packageType === config.packageType,
+                activeStatus: report.activeStatus,
+                totalEarned: report.totalEarned,
+                thisMonth: report.thisMonth,
+                todayEarned: report.todayEarned,
+                cappingUsed: report.cappingUsed,
+                cappingLimit: config.capping,
+                carryForwardBV: report.carryForwardBV,
+                leftBV: report.leftBV,
+                rightBV: report.rightBV,
+                matchedPV: report.matchedPV,
+                personalPV: report.personalPV,
                 config: {
                     bv: config.bv,
                     pv: config.pv,
                     capping: config.capping,
-                    rate: config.rate,
+                    rate: getRateForFilter(type),
                 },
-
-                // Table data
-                history: formattedHistory,
+                history: report.history.map((entry) => ({
+                    _id: entry._id,
+                    date: entry.createdAt,
+                    description: entry.description || "Matching Bonus",
+                    matchedPV: entry.matchedPV,
+                    bonusAmount: entry.amount,
+                    status: "credited",
+                    sourceUser: entry.sourceUser,
+                    sourceOrder: entry.sourceOrder,
+                })),
             },
         });
-    } catch (err) {
-        console.error("getMatchingBonusReport error:", err);
-        return res.status(500).json({ success: false, message: "Internal server error" });
+    } catch (error) {
+        console.error("getMatchingBonusReport error:", error);
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Internal server error",
+        });
     }
 };
 
-// ─── Helper: extract matched PV from description string ──────────────────────
-function extractMatchedPV(description = "") {
-    const match = description.match(/(\d+\.?\d*)\s*PV/i);
-    return match ? parseFloat(match[1]) : null;
-}
+exports.getMatchingReport = async (req, res) => {
+    try {
+        const targetUserId =
+            req.params.userId === "me" ? String(req.user._id) : String(req.params.userId);
 
-/**
- * GET /api/mlm/matching-bonus-summary
- * Returns summary for all 3 packages at once (for dashboard widget)
- */
+        if (req.user.role !== "admin" && String(req.user._id) !== targetUserId) {
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized to view this report",
+            });
+        }
+
+        const report = await getMatchingReportData({
+            userId: targetUserId,
+            filterType: req.query.type || null,
+        });
+
+        return res.json({
+            success: true,
+            data: report,
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || "Internal server error",
+        });
+    }
+};
+
 exports.getAllMatchingSummary = async (req, res) => {
     try {
-        const userId = req.user._id;
+        const report = await getMatchingReportData({ userId: req.user._id });
 
-        const history = await IncomeHistory.find({ userId, type: "Matching" }).lean();
+        const summary = Object.entries(FILTER_TO_PACKAGE).map(([filter, config]) => {
+            const ledgerType = normalizeMatchingFilter(filter);
+            const totals = report.totalsByType[ledgerType] || {
+                amount: 0,
+                matchedPV: 0,
+                count: 0,
+            };
 
-        const summary = Object.entries(PACKAGE_CONFIG).map(([key, config]) => {
-            const total = history.reduce((sum, h) => sum + (h.amount || 0), 0);
             return {
-                packageKey: key,
+                type: filter,
+                packageKey: config.packageType,
                 name: config.name,
                 capping: config.capping,
-                totalEarned: key === "2699" ? total : 0, // simplified; filtered per package in real impl
+                totalEarned: totals.amount,
+                matchedPV: totals.matchedPV,
+                totalEntries: totals.count,
             };
         });
 
         return res.json({ success: true, data: summary });
-    } catch (err) {
-        return res.status(500).json({ success: false, message: "Internal server error" });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Internal server error",
+        });
     }
 };

@@ -4,6 +4,12 @@ const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 const mlmAdminController = require("../controllers/mlmAdminController");
 const mlmController = require("../controllers/mlmController");
+const mlmNetworkController = require("../controllers/mlmNetworkController");
+
+router.post("/register", mlmNetworkController.register);
+router.get("/validate/:sponsorId", mlmNetworkController.validateSponsor);
+router.get("/tree/:userId", protect, mlmNetworkController.getTree);
+router.get("/directs/:userId", protect, mlmNetworkController.getDirects);
 
 // Admin Routes
 router.get("/admin/users", protect, adminOnly, mlmAdminController.getAllUsers);

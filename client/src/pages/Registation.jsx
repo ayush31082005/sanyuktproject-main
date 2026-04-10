@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { addressData } from '../data/addressData';
 import { registerUser } from '../services/api/auth';
 
 const RegistrationForm = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         sponsorId: '',
@@ -33,6 +34,17 @@ const RegistrationForm = () => {
     const [success, setSuccess] = useState('');
     const [profileImage] = useState(null);
 
+    const referralSponsorId = useMemo(() => String(searchParams.get('ref') || '').trim().toUpperCase(), [searchParams]);
+    const referralPosition = useMemo(() => {
+        const rawPosition = String(searchParams.get('pos') || '').trim().toLowerCase();
+        if (rawPosition === 'left') return 'Left';
+        if (rawPosition === 'right') return 'Right';
+        return '';
+    }, [searchParams]);
+
+    const sponsorLocked = Boolean(referralSponsorId);
+    const positionLocked = Boolean(referralPosition);
+
     const states = Object.keys(addressData).sort();
 
     const getDistrictsForState = (state) => {
@@ -40,8 +52,8 @@ const RegistrationForm = () => {
             if (!state) return [];
             const stateData = addressData[state];
             return stateData ? Object.keys(stateData) : [];
-        } catch (error) {
-            console.error("Error getting districts:", error);
+        } catch (fetchError) {
+            console.error('Error getting districts:', fetchError);
             return [];
         }
     };
@@ -49,18 +61,28 @@ const RegistrationForm = () => {
     const districts = getDistrictsForState(formData.state);
 
     useEffect(() => {
+        if (!referralSponsorId && !referralPosition) return;
+
+        setFormData((prev) => ({
+            ...prev,
+            sponsorId: referralSponsorId || prev.sponsorId,
+            position: referralPosition || prev.position,
+        }));
+    }, [referralPosition, referralSponsorId]);
+
+    useEffect(() => {
         const fetchSponsorName = async () => {
             if (formData.sponsorId.length >= 3) {
                 try {
                     const res = await api.get(`/sponsor/${formData.sponsorId}`);
                     if (res.data.name) {
-                        setFormData(prev => ({ ...prev, sponsorName: res.data.name }));
+                        setFormData((prev) => ({ ...prev, sponsorName: res.data.name }));
                     }
                 } catch {
-                    setFormData(prev => ({ ...prev, sponsorName: '' }));
+                    setFormData((prev) => ({ ...prev, sponsorName: '' }));
                 }
             } else {
-                setFormData(prev => ({ ...prev, sponsorName: '' }));
+                setFormData((prev) => ({ ...prev, sponsorName: '' }));
             }
         };
 
@@ -71,14 +93,17 @@ const RegistrationForm = () => {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
+        if (name === 'sponsorId' && sponsorLocked) return;
+        if (name === 'position' && positionLocked) return;
+
         if (name === 'state') {
-            setFormData(prev => ({
+            setFormData((prev) => ({
                 ...prev,
                 state: value,
                 district: '',
             }));
         } else {
-            setFormData(prev => ({
+            setFormData((prev) => ({
                 ...prev,
                 [name]: value
             }));
@@ -90,7 +115,7 @@ const RegistrationForm = () => {
 
     const validateForm = () => {
         if (!agreed) {
-            setError("Please accept the terms and conditions");
+            setError('Please accept the terms and conditions');
             return false;
         }
 
@@ -112,7 +137,7 @@ const RegistrationForm = () => {
             { field: 'village', message: 'Village' }
         ];
 
-        for (let item of requiredFields) {
+        for (const item of requiredFields) {
             if (!formData[item.field] || formData[item.field].trim() === '') {
                 setError(`Please enter ${item.message}`);
                 return false;
@@ -121,19 +146,19 @@ const RegistrationForm = () => {
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
-            setError("Please enter a valid email address");
+            setError('Please enter a valid email address');
             return false;
         }
 
         const mobileRegex = /^\d{10}$/;
         if (!mobileRegex.test(formData.mobile)) {
-            setError("Please enter a valid 10-digit mobile number");
+            setError('Please enter a valid 10-digit mobile number');
             return false;
         }
 
         const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
         if (!passwordRegex.test(formData.password)) {
-            setError("Password must be at least 8 characters and contain at least one letter, one number, and one special symbol (@$!%*?&)");
+            setError('Password must be at least 8 characters and contain at least one letter, one number, and one special symbol (@$!%*?&)');
             return false;
         }
 
@@ -156,13 +181,13 @@ const RegistrationForm = () => {
             const data = await registerUser(payload);
 
             if (data) {
-                setSuccess("Registration successful! Redirecting to verification...");
+                setSuccess('Registration successful! Redirecting to verification...');
 
                 localStorage.setItem('registrationEmail', formData.email);
                 localStorage.setItem('registrationMobile', formData.mobile);
 
                 setTimeout(() => {
-                    navigate("/verify-otp", {
+                    navigate('/verify-otp', {
                         state: {
                             email: formData.email,
                             mobile: formData.mobile
@@ -170,8 +195,8 @@ const RegistrationForm = () => {
                     });
                 }, 1500);
             }
-        } catch (error) {
-            setError(error.message || "Registration failed. Please try again.");
+        } catch (submitError) {
+            setError(submitError.message || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -179,20 +204,27 @@ const RegistrationForm = () => {
 
     return (
         <div className="bg-[#0D0D0D] font-sans text-[#F5E6C8] selection:bg-[#C8A96A]/30 py-6 md:py-10 px-4 relative overflow-hidden">
-            {/* Elegant Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-[#C8A96A]/5 rounded-full blur-[140px] animate-pulse"></div>
                 <div className="absolute bottom-[-5%] left-[-5%] w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[120px] animate-pulse delay-700"></div>
             </div>
 
             <div className="max-w-4xl mx-auto luxury-box z-10 relative mt-4">
-                {/* Header built with Elite luxury styling */}
                 <div className="bg-[#121212] py-6 md:py-8 px-8 text-center border-b border-[#C8A96A]/30">
                     <h2 className="text-2xl md:text-3xl font-serif font-black mb-1 text-[#C8A96A] uppercase tracking-tight">Registration <span className="text-[#F5E6C8]">Form</span></h2>
                     <p className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] text-[#C8A96A]/60">Join our Sanyukt Parivaar today</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 md:p-10 space-y-5">
+                    {(sponsorLocked || positionLocked) && (
+                        <div className="rounded-xl border border-[#C8A96A]/30 bg-[#C8A96A]/10 px-4 py-3 text-sm font-bold text-[#F5E6C8]">
+                            Referral link applied
+                            <div className="mt-1 text-[12px] font-semibold text-[#F5E6C8]/80">
+                                Sponsor: {referralSponsorId || 'Auto detected'}{referralPosition ? ` | Preferred position: ${referralPosition}` : ''}
+                            </div>
+                        </div>
+                    )}
+
                     {error && (
                         <div className="p-3 bg-red-900/20 border border-red-500/30 text-red-500 rounded-xl text-sm font-black animate-slide-down">
                             {error}
@@ -204,9 +236,7 @@ const RegistrationForm = () => {
                         </div>
                     )}
 
-                    {/* Standard Inputs */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Sponsor Id */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Sponsor Id <span className="text-red-500">*</span></label>
                             <input
@@ -214,12 +244,12 @@ const RegistrationForm = () => {
                                 name="sponsorId"
                                 value={formData.sponsorId}
                                 onChange={handleChange}
+                                readOnly={sponsorLocked}
                                 placeholder="Enter Sponsor Id"
-                                className="w-full bg-[#0D0D0D] border border-[#C8A96A]/20 rounded-2xl px-5 py-4 text-[15px] text-[#F5E6C8] placeholder:text-[#F5E6C8]/35 focus:border-[#C8A96A] focus:ring-1 focus:ring-[#C8A96A]/30 outline-none transition-all font-bold"
+                                className={`w-full border border-[#C8A96A]/20 rounded-2xl px-5 py-4 text-[15px] text-[#F5E6C8] placeholder:text-[#F5E6C8]/35 focus:border-[#C8A96A] focus:ring-1 focus:ring-[#C8A96A]/30 outline-none transition-all font-bold ${sponsorLocked ? 'bg-[#1A1A1A] cursor-not-allowed' : 'bg-[#0D0D0D]'}`}
                             />
                         </div>
 
-                        {/* Sponsor Name */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Sponsor Name</label>
                             <input
@@ -232,14 +262,14 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Position */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Position <span className="text-red-500">*</span></label>
                             <select
                                 name="position"
                                 value={formData.position}
                                 onChange={handleChange}
-                                className="w-full bg-[#0D0D0D] border border-[#C8A96A]/20 rounded-2xl px-5 py-4 text-[15px] text-[#F5E6C8] placeholder:text-[#F5E6C8]/35 focus:border-[#C8A96A] outline-none transition-all font-bold appearance-none"
+                                disabled={positionLocked}
+                                className={`w-full border border-[#C8A96A]/20 rounded-2xl px-5 py-4 text-[15px] text-[#F5E6C8] placeholder:text-[#F5E6C8]/35 focus:border-[#C8A96A] outline-none transition-all font-bold appearance-none ${positionLocked ? 'bg-[#1A1A1A] cursor-not-allowed' : 'bg-[#0D0D0D]'}`}
                             >
                                 <option value="" className="bg-[#0D0D0D] text-[#F5E6C8]">- Select Position -</option>
                                 <option value="Left" className="bg-[#0D0D0D] text-[#F5E6C8]">Left</option>
@@ -247,7 +277,6 @@ const RegistrationForm = () => {
                             </select>
                         </div>
 
-                        {/* Name */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Name <span className="text-red-500">*</span></label>
                             <input
@@ -260,7 +289,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Father Name */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Father Name <span className="text-red-500">*</span></label>
                             <input
@@ -273,7 +301,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Gender */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Gender <span className="text-red-500">*</span></label>
                             <select
@@ -289,7 +316,6 @@ const RegistrationForm = () => {
                             </select>
                         </div>
 
-                        {/* Mobile Number */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Mobile <span className="text-red-500">*</span></label>
                             <input
@@ -303,7 +329,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Email */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Email ID <span className="text-red-500">*</span></label>
                             <input
@@ -316,7 +341,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Password */}
                         <div className="flex flex-col gap-2 relative group/input md:col-span-2">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Password <span className="text-red-500">*</span></label>
                             <input
@@ -329,7 +353,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Shipping Address */}
                         <div className="flex flex-col gap-2 relative group/input md:col-span-2">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Shipping Address <span className="text-red-500">*</span></label>
                             <p className="text-[11px] text-gray-500 italic mb-2 font-bold">Note: Enter complete shipping address with city, pincode, and state.</p>
@@ -343,7 +366,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* State */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">State <span className="text-red-500">*</span></label>
                             <select
@@ -359,7 +381,6 @@ const RegistrationForm = () => {
                             </select>
                         </div>
 
-                        {/* District */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">District <span className="text-red-500">*</span></label>
                             <select
@@ -376,7 +397,6 @@ const RegistrationForm = () => {
                             </select>
                         </div>
 
-                        {/* Assembly Area */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Assembly <span className="text-red-500">*</span></label>
                             <input
@@ -389,7 +409,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Block */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Block <span className="text-red-500">*</span></label>
                             <input
@@ -402,7 +421,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Village Council */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Village Council <span className="text-red-500">*</span></label>
                             <input
@@ -415,7 +433,6 @@ const RegistrationForm = () => {
                             />
                         </div>
 
-                        {/* Village */}
                         <div className="flex flex-col gap-2 relative group/input">
                             <label className="text-[11px] md:text-xs font-black uppercase tracking-widest text-[#C8A96A]">Village <span className="text-red-500">*</span></label>
                             <input
@@ -429,7 +446,6 @@ const RegistrationForm = () => {
                         </div>
                     </div>
 
-                    {/* Checkbox */}
                     <div className="flex items-start gap-4 pt-6">
                         <input
                             type="checkbox"
@@ -443,7 +459,6 @@ const RegistrationForm = () => {
                         </label>
                     </div>
 
-                    {/* Submit */}
                     <div className="pt-2">
                         <button
                             type="submit"

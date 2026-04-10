@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const BinaryTree = require("../models/BinaryTree");
 const IncomeHistory = require("../models/IncomeHistory");
+const { getBinaryTree, getDirectReferrals, getTeamMembersByType } = require("../services/mlmService");
 
 /**
  * Get All Users for Admin
@@ -20,32 +21,8 @@ exports.getAllUsers = async (req, res) => {
 exports.getBinaryTree = async (req, res) => {
     try {
         const { userId } = req.params;
-        const tree = await BinaryTree.findOne({ userId }).populate("userId", "userName memberId position rank");
-
-        if (!tree) return res.status(404).json({ message: "Tree not found" });
-
-        // Recursive function to build tree data
-        const buildTree = async (uId) => {
-            const node = await BinaryTree.findOne({ userId: uId }).populate("userId", "userName memberId position rank");
-            if (!node) return null;
-
-            return {
-                id: node.userId._id,
-                name: node.userId.userName,
-                memberId: node.userId.memberId,
-                position: node.position,
-                rank: node.userId.rank,
-                leftPV: node.leftPV,
-                rightPV: node.rightPV,
-                children: [
-                    await buildTree(node.leftId),
-                    await buildTree(node.rightId)
-                ].filter(child => child !== null)
-            };
-        };
-
-        const fullTree = await buildTree(userId);
-        res.json(fullTree);
+        const tree = await getBinaryTree(userId);
+        res.json(tree);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -62,7 +39,7 @@ exports.updateUserStatus = async (req, res) => {
 
         user.activeStatus = activeStatus;
         await user.save();
-        res.json({ message: `User status updated to ${activeStatus ? 'Active' : 'Inactive'}` });
+        res.json({ message: `User status updated to ${activeStatus ? "Active" : "Inactive"}` });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -79,17 +56,15 @@ exports.getMLMStats = async (req, res) => {
 
         const tree = await BinaryTree.findOne({ userId });
 
-        // Count direct referrals
         const directCount = await User.countDocuments({ sponsorId: user.memberId });
 
-        // Build the stats object
         const stats = {
             walletBalance: user.walletBalance,
             pv: user.pv,
             bv: user.bv,
             rank: user.rank,
             activeStatus: user.activeStatus,
-            directCount: directCount,
+            directCount,
             leftPV: tree ? tree.leftPV : 0,
             rightPV: tree ? tree.rightPV : 0,
             leftBV: tree ? tree.leftBV : 0,
@@ -111,10 +86,7 @@ exports.getMLMStats = async (req, res) => {
 exports.getDirects = async (req, res) => {
     try {
         const userId = req.params.userId || req.user._id;
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        const directs = await User.find({ sponsorId: user.memberId }).select("-password -otp");
+        const directs = await getDirectReferrals(userId);
         res.json(directs);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -141,47 +113,9 @@ exports.getIncomeReports = async (req, res) => {
  */
 exports.getTeamList = async (req, res) => {
     try {
-        const { type } = req.params; // 'left', 'right', 'all'
+        const { type } = req.params;
         const userId = req.params.userId || req.user._id;
-
-        const treeNode = await BinaryTree.findOne({ userId });
-        if (!treeNode) return res.json([]);
-
-        let rootIds = [];
-        if (type === 'left' && treeNode.leftId) rootIds = [treeNode.leftId];
-        else if (type === 'right' && treeNode.rightId) rootIds = [treeNode.rightId];
-        else if (type === 'all') {
-            if (treeNode.leftId) rootIds.push(treeNode.leftId);
-            if (treeNode.rightId) rootIds.push(treeNode.rightId);
-        }
-
-        if (rootIds.length === 0) return res.json([]);
-
-        let team = [];
-        let queue = [...rootIds];
-        let visited = new Set();
-
-        // ✅ Optimization: Limit depth or use batching if team is huge
-        // For now, we fetch in larger chunks to reduce round-trips
-        while (queue.length > 0) {
-            const currentBatch = queue.splice(0, 50); // Process in batches of 50
-            const users = await User.find({ _id: { $in: currentBatch } })
-                .select("userName memberId packageType activeStatus rank createdAt position")
-                .lean();
-
-            for (const user of users) {
-                if (visited.has(user._id.toString())) continue;
-                visited.add(user._id.toString());
-                team.push(user);
-
-                const node = await BinaryTree.findOne({ userId: user._id }).select("leftId rightId").lean();
-                if (node) {
-                    if (node.leftId) queue.push(node.leftId);
-                    if (node.rightId) queue.push(node.rightId);
-                }
-            }
-        }
-
+        const team = await getTeamMembersByType(userId, type);
         res.json(team);
     } catch (error) {
         console.error("getTeamList error:", error);
@@ -196,31 +130,37 @@ exports.getSystemMLMStats = async (req, res) => {
     try {
         const totalUsers = await User.countDocuments({});
         const activeUsersCount = await User.countDocuments({ activeStatus: true });
-        
+
         const pvTotals = await User.aggregate([
-            { $group: { 
-                _id: null, 
-                totalPV: { $sum: { $toDouble: "$pv" } },
-                totalBV: { $sum: { $toDouble: "$bv" } },
-                totalMatchedPV: { $sum: { $toDouble: "$matchedPV" } }
-            }}
+            {
+                $group: {
+                    _id: null,
+                    totalPV: { $sum: { $toDouble: "$pv" } },
+                    totalBV: { $sum: { $toDouble: "$bv" } },
+                    totalMatchedPV: { $sum: { $toDouble: "$matchedPV" } }
+                }
+            }
         ]);
 
         const treeTotals = await BinaryTree.aggregate([
-            { $group: {
-                _id: null,
-                totalLeftPV: { $sum: "$leftPV" },
-                totalRightPV: { $sum: "$rightPV" },
-                totalLeftBV: { $sum: "$leftBV" },
-                totalRightBV: { $sum: "$rightBV" }
-            }}
+            {
+                $group: {
+                    _id: null,
+                    totalLeftPV: { $sum: "$leftPV" },
+                    totalRightPV: { $sum: "$rightPV" },
+                    totalLeftBV: { $sum: "$leftBV" },
+                    totalRightBV: { $sum: "$rightBV" }
+                }
+            }
         ]);
 
         const incomeTotals = await IncomeHistory.aggregate([
-            { $group: {
-                _id: "$type",
-                total: { $sum: "$amount" }
-            }}
+            {
+                $group: {
+                    _id: "$type",
+                    total: { $sum: "$amount" }
+                }
+            }
         ]);
 
         const rankDistribution = await User.aggregate([
@@ -233,7 +173,7 @@ exports.getSystemMLMStats = async (req, res) => {
             pvStats: pvTotals[0] || { totalPV: 0, totalBV: 0, totalMatchedPV: 0 },
             treeStats: treeTotals[0] || { totalLeftPV: 0, totalRightPV: 0, totalLeftBV: 0, totalRightBV: 0 },
             incomeStats: incomeTotals.reduce((acc, curr) => ({ ...acc, [curr._id]: curr.total }), {}),
-            rankDistribution: rankDistribution.reduce((acc, curr) => ({ ...acc, [curr._id || 'Member']: curr.count }), {})
+            rankDistribution: rankDistribution.reduce((acc, curr) => ({ ...acc, [curr._id || "Member"]: curr.count }), {})
         });
     } catch (error) {
         console.error("getSystemMLMStats error:", error);

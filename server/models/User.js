@@ -1,10 +1,16 @@
 const mongoose = require("mongoose");
 
+const normalizeTreePosition = (value) => {
+    if (typeof value !== "string") return value;
+
+    const normalized = value.trim().toLowerCase();
+    return normalized === "left" || normalized === "right" ? normalized : value;
+};
+
 const userSchema = new mongoose.Schema(
     {
         sponsorId: {
             type: String,
-            // required: true,  // 👈 Comment out ya remove
             trim: true,
         },
         memberId: {
@@ -18,33 +24,28 @@ const userSchema = new mongoose.Schema(
         },
         userName: {
             type: String,
-            // required: true,  // 👈 Comment out
             trim: true,
         },
         fatherName: {
             type: String,
-            // required: true,  // 👈 Comment out
             trim: true,
         },
         position: {
             type: String,
-            enum: ["Left", "Right"],
-            // required: true,  // 👈 Comment out
+            enum: ["Left", "Right", "left", "right"],
+            set: normalizeTreePosition,
         },
         gender: {
             type: String,
             enum: ["Male", "Female", "Other"],
-            // required: true,  // 👈 Comment out
         },
         mobile: {
             type: String,
-            // required: true,  // 👈 Comment out
             match: [/^\d{10}$/, "Invalid mobile number"],
-            // unique: true,    // 👈 Unique bhi hata do temporarily
         },
         email: {
             type: String,
-            required: true,     // 👈 SIRF YEH REQUIRED RAKHO
+            required: true,
             unique: true,
             lowercase: true,
             trim: true,
@@ -56,35 +57,27 @@ const userSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            // required: true,  // 👈 Comment out (grievance wale users ke liye)
         },
         shippingAddress: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         state: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         district: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         assemblyArea: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         block: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         villageCouncil: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         village: {
             type: String,
-            // required: true,  // 👈 Comment out
         },
         joinDate: {
             type: Date,
@@ -119,33 +112,43 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        // Binary Tree Relationships
+        // Binary tree placement
         parent: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: "User",
             default: null
         },
         parentId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: "User",
             default: null
         },
-        leftColor: { // Total PV/BV on left (optional, but good for caching)
+        leftColor: {
             pv: { type: Number, default: 0 },
             bv: { type: Number, default: 0 }
         },
-        rightColor: { // Total PV/BV on right
+        rightColor: {
             pv: { type: Number, default: 0 },
             bv: { type: Number, default: 0 }
         },
         left: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: "User",
+            default: null
+        },
+        leftChildId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
             default: null
         },
         right: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: "User",
+            default: null
+        },
+        rightChildId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
             default: null
         },
         isVerified: {
@@ -165,13 +168,13 @@ const userSchema = new mongoose.Schema(
             }
         ],
         profileImage: {
-            type: String, // base64 data URL
+            type: String,
             default: null
         },
         kycStatus: {
             type: String,
-            enum: ['Pending', 'Submitted', 'Verified', 'Rejected'],
-            default: 'Pending'
+            enum: ["Pending", "Submitted", "Verified", "Rejected"],
+            default: "Pending"
         },
         aadharNumber: {
             type: String,
@@ -209,6 +212,22 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        totalLeftPV: {
+            type: Number,
+            default: 0
+        },
+        totalRightPV: {
+            type: Number,
+            default: 0
+        },
+        usedLeftPV: {
+            type: Number,
+            default: 0
+        },
+        usedRightPV: {
+            type: Number,
+            default: 0
+        },
         totalMatchingBonus: {
             type: Number,
             default: 0
@@ -216,6 +235,15 @@ const userSchema = new mongoose.Schema(
         matchedPV: {
             type: Number,
             default: 0
+        },
+        firstPurchaseOrderId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Order",
+            default: null
+        },
+        firstPurchaseProcessedAt: {
+            type: Date,
+            default: null
         },
         totalDirectIncome: {
             type: Number,
@@ -245,6 +273,8 @@ const userSchema = new mongoose.Schema(
 userSchema.index({ sponsorId: 1 });
 userSchema.index({ parentId: 1 });
 userSchema.index({ parent: 1 });
+userSchema.index({ leftChildId: 1 });
+userSchema.index({ rightChildId: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ activeStatus: 1 });
 

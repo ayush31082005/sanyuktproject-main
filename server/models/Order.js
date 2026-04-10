@@ -27,8 +27,24 @@ const orderSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ["cod", "online", "upi", "card"],
+        enum: ["cod", "online", "upi", "card", "product-wallet", "e-wallet", "repurchase-wallet"],
         default: "cod"
+    },
+    orderType: {
+        type: String,
+        enum: ["standard", "first", "repurchase"],
+        default: "standard",
+        index: true,
+    },
+    orderTo: {
+        type: String,
+        enum: ["admin", "franchise", "self"],
+        default: "self",
+    },
+    directSellerId: {
+        type: String,
+        trim: true,
+        default: "",
     },
     subtotal: Number,
     shipping: Number,
@@ -54,7 +70,29 @@ const orderSchema = new mongoose.Schema({
         status: String,
         message: String,
         timestamp: { type: Date, default: Date.now }
-    }]
+    }],
+    binaryProcessStatus: {
+        type: String,
+        enum: ["pending", "processed", "skipped", "failed"],
+        default: "pending"
+    },
+    binaryProcessedAt: {
+        type: Date,
+        default: null
+    },
+    binaryProcessNote: {
+        type: String,
+        default: ""
+    },
+    mlmPackageType: {
+        type: String,
+        enum: ["", "599", "1299", "2699"],
+        default: ""
+    },
+    mlmPV: {
+        type: Number,
+        default: 0
+    }
 }, { timestamps: true });
 
 orderSchema.index({ user: 1 });

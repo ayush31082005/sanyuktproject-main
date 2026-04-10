@@ -4,6 +4,7 @@ const Repurchase = require("../models/Repurchase");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const { processOrderMLM } = require("../utils/mlmOrderUtils");
+const { createWalletLedgerEntry, getWalletBalance, normalizeWalletType } = require("../utils/walletLedgerUtils");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
@@ -103,7 +104,13 @@ exports.createOrder = async (req, res) => {
 
         await order.save();
 
-        processOrderMLM(req.user._id, orderBv, orderPv);
+        if (order.status !== "pending") {
+            await processOrderMLM(req.user._id, orderBv, orderPv, {
+                orderId: order._id,
+                orderType: order.orderType,
+                orderTotal: Number(order.total || total || 0),
+            });
+        }
 
         try {
             const newRepurchase = await Repurchase.create({
@@ -165,25 +172,22 @@ exports.placeFirstPurchase = async (req, res) => {
         const isMatch = await bcrypt.compare(accountPassword, user.password);
         if (!isMatch) return res.status(401).json({ message: "Account password galat hai" });
 
-        // Total calculate karo
-        const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const totalBV = cart.reduce((sum, item) => sum + ((item.bv || 0) * item.quantity), 0);
-        const totalPV = totalBV / 1000;
-
-        // Wallet balance check aur deduct
-        if (payFrom === 'product-wallet') {
-            if ((user.productWalletBalance || 0) < totalAmount)
-                return res.status(400).json({ message: `Product wallet mein insufficient balance. Available: ₹${user.productWalletBalance || 0}, Required: ₹${totalAmount}` });
-            user.productWalletBalance -= totalAmount;
-        } else if (payFrom === 'e-wallet') {
-            if ((user.walletBalance || 0) < totalAmount)
-                return res.status(400).json({ message: `E-wallet mein insufficient balance. Available: ₹${user.walletBalance || 0}, Required: ₹${totalAmount}` });
-            user.walletBalance -= totalAmount;
-        } else {
+        const normalizedWalletType = normalizeWalletType(payFrom);
+        if (!["product-wallet", "e-wallet"].includes(normalizedWalletType)) {
             return res.status(400).json({ message: "Invalid wallet selected" });
         }
 
-        await user.save();
+        // Total calculate karo
+        const totalAmount = cart.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0);
+        const totalBV = cart.reduce((sum, item) => sum + ((Number(item.bv || 0)) * Number(item.quantity || 0)), 0);
+        const totalPV = totalBV / 1000;
+
+        const currentWallet = await getWalletBalance(req.user._id, normalizedWalletType);
+        if (currentWallet.balance < totalAmount) {
+            return res.status(400).json({
+                message: `${normalizedWalletType === "product-wallet" ? "Product wallet" : "E-wallet"} mein insufficient balance. Available: Rs ${currentWallet.balance}, Required: Rs ${totalAmount}`,
+            });
+        }
 
         // Har product ke liye alag Order create karo
         const createdOrders = [];
@@ -202,13 +206,14 @@ exports.placeFirstPurchase = async (req, res) => {
                 product: productId,
                 quantity: item.quantity,
                 shippingInfo: { address: shippingAddress },
-                paymentMethod: payFrom === 'product-wallet' ? 'product-wallet' : 'e-wallet',
+                paymentMethod: normalizedWalletType,
                 total: item.price * item.quantity,
                 subtotal: item.price * item.quantity,
                 bv: productBV * item.quantity,
                 pv: (productBV * item.quantity) / 1000,
                 orderType: 'first',
                 orderTo: orderTo || 'self',
+                directSellerId: directSellerId || "",
                 status: 'pending',
                 tracking: [{ status: 'pending', message: 'First purchase order placed', timestamp: new Date() }]
             });
@@ -216,9 +221,28 @@ exports.placeFirstPurchase = async (req, res) => {
             createdOrders.push(order);
         }
 
+        const walletLedger = await createWalletLedgerEntry({
+            userId: req.user._id,
+            walletType: normalizedWalletType,
+            txType: "debit",
+            amount: totalAmount,
+            sourceType: "first-purchase-order",
+            sourceId: createdOrders[0]?._id || null,
+            description: `First purchase order payment (${createdOrders.length} item(s))`,
+            meta: {
+                orderIds: createdOrders.map((order) => order._id),
+                orderTo: orderTo || "self",
+                directSellerId: directSellerId || "",
+            },
+        });
+
         // MLM income trigger karo (non-blocking)
         try {
-            processOrderMLM(req.user._id, totalBV, totalPV);
+            await processOrderMLM(req.user._id, totalBV, totalPV, {
+                orderId: createdOrders[0]?._id || null,
+                orderType: "first",
+                orderTotal: Number(totalAmount || 0),
+            });
         } catch (mlmErr) {
             console.error("❌ MLM trigger error:", mlmErr.message);
         }
@@ -258,7 +282,8 @@ exports.placeFirstPurchase = async (req, res) => {
             orders: createdOrders,
             totalAmount,
             totalBV,
-            walletUsed: payFrom
+            walletUsed: normalizedWalletType,
+            balanceAfter: walletLedger.balanceAfter,
         });
 
     } catch (error) {
@@ -358,6 +383,24 @@ exports.updateOrderStatus = async (req, res) => {
         });
 
         await order.save();
+
+        const shouldTriggerBinary =
+            order.orderType === "first" &&
+            order.binaryProcessStatus === "pending" &&
+            ["paid", "processing", "shipped", "reached_store", "out_for_delivery", "delivered"].includes(order.status);
+
+        if (shouldTriggerBinary) {
+            try {
+                await processOrderMLM(order.user, order.bv, order.pv, {
+                    orderId: order._id,
+                    orderType: order.orderType,
+                    orderTotal: Number(order.total || 0),
+                });
+            } catch (mlmErr) {
+                console.error("Order status MLM trigger error:", mlmErr.message);
+            }
+        }
+
         res.json({ message: "Order status updated", order });
     } catch (error) {
         res.status(500).json({ message: "Server error" });

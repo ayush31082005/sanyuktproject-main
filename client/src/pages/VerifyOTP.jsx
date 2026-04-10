@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Phone, ArrowLeft, Clock, RefreshCw } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Phone, ArrowLeft, ArrowRight, Clock, RefreshCw } from 'lucide-react';
 import api from '../api';
 
 const VerifyOTP = () => {

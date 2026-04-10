@@ -5,6 +5,7 @@ const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 // ================= USER ROUTES =================
 router.post("/", protect, orderController.createOrder);
+router.post("/first-purchase", protect, orderController.placeFirstPurchase);
 router.post("/razorpay-order", protect, orderController.createRazorpayOrder);
 router.get("/myorders", protect, orderController.myOrders);
 // ================= ADMIN ROUTES =================

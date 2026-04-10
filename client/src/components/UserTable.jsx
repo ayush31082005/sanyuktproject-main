@@ -1,37 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, FileText, Download } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import api from '../api';
 import toast from 'react-hot-toast';
+
+const ITEMS_PER_PAGE = 10;
+
+const resolveDataArray = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.directs)) return payload.directs;
+    if (Array.isArray(payload?.team)) return payload.team;
+    if (Array.isArray(payload?.users)) return payload.users;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+};
+
+const normalizeItem = (item) => ({
+    ...item,
+    userId: item?.userId || item?._id || null,
+    memberId: item?.memberId || '-',
+    userName: item?.userName || item?.name || '-',
+    rank: item?.rank || 'Member',
+    activeStatus: Boolean(item?.activeStatus),
+    position: item?.position || null,
+    sponsorId: item?.sponsorId || null,
+});
 
 const UserTable = ({ title, type, endpoint }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
-    const itemsPerPage = 10;
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
+
             try {
-                // Determine source endpoint
                 let sourceEndpoint = endpoint || 'mlm/get-stats';
-                
-                // Ensure no leading slash for axios baseURL compatibility
+
                 if (sourceEndpoint.startsWith('/')) {
                     sourceEndpoint = sourceEndpoint.substring(1);
                 }
-                
-                // Single API call
+
                 const res = await api.get(sourceEndpoint);
-                
-                // Handle different response structures if needed
-                if (res.data) {
-                    setData(Array.isArray(res.data) ? res.data : []);
-                }
+                const nextData = resolveDataArray(res.data).map(normalizeItem);
+                setData(nextData);
             } catch (err) {
                 console.error(`Error fetching ${title}:`, err);
                 toast.error(`Failed to load ${title}`);
+                setData([]);
             } finally {
                 setLoading(false);
             }
@@ -40,14 +57,24 @@ const UserTable = ({ title, type, endpoint }) => {
         fetchData();
     }, [endpoint, title, type]);
 
-    const filteredData = data.filter(item => 
-        Object.values(item).some(val => 
-            String(val).toLowerCase().includes(search.toLowerCase())
-        )
-    );
+    useEffect(() => {
+        setPage(1);
+    }, [search, data.length]);
 
-    const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-    const currentData = filteredData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+    const filteredData = useMemo(() => {
+        const needle = search.trim().toLowerCase();
+        if (!needle) return data;
+
+        return data.filter((item) =>
+            Object.values(item).some((value) =>
+                String(value ?? '').toLowerCase().includes(needle)
+            )
+        );
+    }, [data, search]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / ITEMS_PER_PAGE));
+    const currentPage = Math.min(page, totalPages);
+    const currentData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     return (
         <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-50 overflow-hidden flex flex-col h-full">
@@ -56,13 +83,13 @@ const UserTable = ({ title, type, endpoint }) => {
                     <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-[0.15em] mb-1">{title}</h2>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Records: {filteredData.length}</p>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <input 
-                            type="text" 
-                            placeholder="Search records..." 
+                        <input
+                            type="text"
+                            placeholder="Search records..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full md:w-64"
@@ -109,15 +136,15 @@ const UserTable = ({ title, type, endpoint }) => {
                             </tr>
                         ) : (
                             currentData.map((item, idx) => (
-                                <tr key={idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                    <td className="py-4 px-4 text-[12px] font-bold text-slate-500">{(page-1)*itemsPerPage + idx + 1}</td>
+                                <tr key={item.userId || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-4 px-4 text-[12px] font-bold text-slate-500">{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
                                     {type === 'income' ? (
                                         <>
-                                            <td className="py-4 px-4 text-[12px] font-bold text-slate-900">{new Date(item.date).toLocaleDateString()}</td>
+                                            <td className="py-4 px-4 text-[12px] font-bold text-slate-900">{item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
                                             <td className="py-4 px-4">
                                                 <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-black uppercase tracking-widest">{item.type}</span>
                                             </td>
-                                            <td className="py-4 px-4 text-[12px] font-black text-slate-900">₹{item.amount.toFixed(2)}</td>
+                                            <td className="py-4 px-4 text-[12px] font-black text-slate-900">Rs {Number(item.amount || 0).toFixed(2)}</td>
                                             <td className="py-4 px-4 text-[12px] font-bold text-slate-500">{item.fromUserId?.userName || 'System'}</td>
                                         </>
                                     ) : (
@@ -136,7 +163,7 @@ const UserTable = ({ title, type, endpoint }) => {
                                         </>
                                     )}
                                     <td className="py-4 px-4">
-                                        <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+                                        <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors" title={item.position ? `Position: ${item.position}` : 'View'}>
                                             <FileText size={16} />
                                         </button>
                                     </td>
@@ -150,19 +177,19 @@ const UserTable = ({ title, type, endpoint }) => {
             {totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Page {page} of {totalPages}
+                        Page {currentPage} of {totalPages}
                     </p>
                     <div className="flex gap-2">
-                        <button 
-                            disabled={page === 1}
-                            onClick={() => setPage(p => p - 1)}
+                        <button
+                            disabled={currentPage === 1}
+                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                             className="p-2 border border-slate-100 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-all"
                         >
                             <ChevronLeft size={16} />
                         </button>
-                        <button 
-                            disabled={page === totalPages}
-                            onClick={() => setPage(p => p + 1)}
+                        <button
+                            disabled={currentPage === totalPages}
+                            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                             className="p-2 border border-slate-100 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-all"
                         >
                             <ChevronRight size={16} />
