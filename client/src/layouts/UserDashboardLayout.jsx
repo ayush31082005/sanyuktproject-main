@@ -18,6 +18,9 @@ import {
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
+const profileFallback =
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80';
+
 const getRankColor = (rank) => {
     const colors = {
         Member: '#8ea2b8',
@@ -170,7 +173,17 @@ const UserDashboardLayout = () => {
                 { name: 'ID Card', path: '/my-account/folder/id-card', id: 'folder_id' },
             ],
         },
-        { id: 'profile', name: 'Profile & KYC', icon: UserCheck, path: '/my-account/profile', badge: '0' },
+        {
+            id: 'profile',
+            name: 'Profile & KYC',
+            icon: UserCheck,
+            path: '/my-account/profile',
+            badge: '0',
+            children: [
+                { name: 'Update Profile', path: '/my-account/profile', id: 'profile_update' },
+                { name: 'Change Password', path: '/forgot-password', id: 'profile_change_password' },
+            ],
+        },
         { id: 'grievance', name: 'Submit Complain', icon: Mail, path: '/my-account/grievances', badge: '0' },
     ]), [stats]);
 
@@ -230,35 +243,37 @@ const UserDashboardLayout = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-[#f1f1f1] text-[#1f2937]">
+        <div className="min-h-screen bg-[#0d0d0d] text-[#f5e6c8]">
+            <div className="sticky top-0 z-40 h-[6px] bg-[#c07a1b]" />
+
+            <div className="flex min-h-[calc(100vh-6px)]">
             <aside
-                className={`fixed left-0 top-[88px] md:top-[115px] z-50 h-[calc(100vh-88px)] md:h-[calc(100vh-115px)] overflow-y-auto border-r border-[#0d7b33] bg-[#0c8f37] text-white transition-all duration-300
-                    ${sidebarOpen ? 'w-[258px]' : 'w-0 overflow-hidden md:w-[76px]'}`}
+                className={`fixed left-0 top-[94px] md:top-[121px] z-50 h-[calc(100vh-94px)] md:h-[calc(100vh-121px)] overflow-y-auto border-r border-[#c8a96a]/14 bg-[linear-gradient(180deg,#121212_0%,#0d0d0d_48%,#111111_100%)] text-[#f5e6c8] transition-all duration-300
+                    ${sidebarOpen ? 'w-[214px]' : 'w-0 overflow-hidden md:w-[82px]'}`}
             >
                 <div className={`${sidebarOpen ? 'px-0 py-0' : 'px-0 py-3'}`}>
-                    <div className={`border-b border-white/15 ${sidebarOpen ? 'px-5 py-4' : 'px-0 py-4'} ${sidebarOpen ? '' : 'flex justify-center'}`}>
+                    <div className={`border-b border-[#c8a96a]/12 ${sidebarOpen ? 'px-4 py-4' : 'px-0 py-4'} ${sidebarOpen ? '' : 'flex justify-center'}`}>
                         {sidebarOpen ? (
                             <div className="flex items-center gap-3">
-                                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-white/25 bg-black shadow-lg">
+                                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-[#c8a96a]/30 bg-black shadow-lg">
                                     <img
-                                        src={userData.profileImage || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80'}
+                                        src={userData.profileImage || profileFallback}
                                         alt="Profile"
                                         className="h-full w-full object-cover"
                                     />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="truncate text-[14px] font-black uppercase tracking-[0.08em] text-white">
+                                    <div className="truncate text-[13px] font-black uppercase tracking-[0.08em] text-[#f5e6c8]">
                                         {userData.userName || 'Member'}
                                     </div>
-                                    <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/80">
+                                    <div className="mt-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#c8a96a]">
                                         {userData.memberId || 'SPRL0000'}
                                     </div>
                                     <div className="mt-2 flex items-center gap-2">
                                         <span
-                                            className="rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.14em]"
+                                            className="rounded-sm bg-[#c8a96a]/12 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-[#f5e6c8]"
                                             style={{
-                                                backgroundColor: `${getRankColor(stats?.rank || 'Member')}33`,
-                                                color: getRankColor(stats?.rank || 'Member'),
+                                                border: `1px solid ${getRankColor(stats?.rank || 'Member')}55`,
                                             }}
                                         >
                                             {stats?.rank || 'Member'}
@@ -267,9 +282,9 @@ const UserDashboardLayout = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black">
+                            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[#c8a96a]/20 bg-black">
                                 <img
-                                    src={userData.profileImage || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=240&q=80'}
+                                    src={userData.profileImage || profileFallback}
                                     alt="Profile"
                                     className="h-full w-full object-cover"
                                 />
@@ -277,7 +292,7 @@ const UserDashboardLayout = () => {
                         )}
                     </div>
 
-                    <nav className="py-1">
+                    <nav className="py-1.5">
                         {menuItems.map((item) => {
                             const hasChildren = Array.isArray(item.children) && item.children.length > 0;
                             const isActiveDirect = location.pathname === item.path || (item.path === '/my-account' && location.pathname === '/my-account/');
@@ -300,13 +315,13 @@ const UserDashboardLayout = () => {
                                             if (isMobile) setSidebarOpen(false);
                                         }}
                                         className={`group relative flex w-full items-center rounded-md border text-left transition-all duration-200
-                                            ${sidebarOpen ? 'min-h-[36px] px-3 py-2' : 'mx-auto min-h-[38px] w-[56px] justify-center px-0'}
+                                            ${sidebarOpen ? 'min-h-[28px] px-2.5 py-1.5' : 'mx-auto min-h-[34px] w-[56px] justify-center px-0'}
                                             ${isActive
-                                                ? 'border-[#0b5a25] bg-[#086a2a] text-white shadow-[inset_3px_0_0_#ff7f11]'
-                                                : 'border-transparent bg-transparent text-white/95 hover:border-white/10 hover:bg-[#0a7c2f]'
+                                                ? 'border-[#c8a96a]/28 bg-[#1b1b1b] text-[#f5e6c8] shadow-[inset_3px_0_0_#c8a96a]'
+                                                : 'border-transparent bg-transparent text-[#f5e6c8]/92 hover:border-[#c8a96a]/18 hover:bg-[#181818]'
                                             }`}
                                     >
-                                        <Icon className={`${sidebarOpen ? 'mr-3 h-4 w-4' : 'h-4 w-4'} shrink-0`} strokeWidth={2.2} />
+                                        <Icon className={`${sidebarOpen ? 'mr-2 h-3.5 w-3.5' : 'h-4 w-4'} shrink-0`} strokeWidth={2.2} />
 
                                         {sidebarOpen && (
                                             <>
@@ -315,7 +330,7 @@ const UserDashboardLayout = () => {
                                                 </span>
                                                 {item.rankBadge && (
                                                     <span
-                                                        className="mr-2 rounded px-1.5 py-0.5 text-[9px] font-black uppercase"
+                                                        className="mr-2 rounded-sm px-1.5 py-0.5 text-[8px] font-black uppercase"
                                                         style={{
                                                             backgroundColor: `${getRankColor(item.rankBadge)}33`,
                                                             color: getRankColor(item.rankBadge),
@@ -325,7 +340,7 @@ const UserDashboardLayout = () => {
                                                     </span>
                                                 )}
                                                 {item.badge !== undefined && item.badge !== null && (
-                                                    <span className="mr-1 rounded bg-white px-1.5 py-0.5 text-[9px] font-black text-[#0c8f37]">
+                                                    <span className="mr-1 rounded-sm border border-[#c8a96a]/18 bg-[#c8a96a]/14 px-1.5 py-0.5 text-[8px] font-black text-[#f5e6c8]">
                                                         {item.badge}
                                                     </span>
                                                 )}
@@ -339,14 +354,14 @@ const UserDashboardLayout = () => {
                                         )}
 
                                         {!sidebarOpen && (
-                                            <div className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded bg-[#145b2e] px-2 py-1 text-[10px] font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                                            <div className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded bg-[#181818] px-2 py-1 text-[10px] font-bold text-[#f5e6c8] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                                                 {item.name}
                                             </div>
                                         )}
                                     </button>
 
                                     {hasChildren && sidebarOpen && openDropdown === item.id && (
-                                        <div className="mt-1 overflow-hidden rounded-md border border-[#0b6a2b] bg-[#0b7d31]/90 py-1">
+                                        <div className="mt-1 overflow-hidden rounded-md border border-[#c8a96a]/14 bg-[#141414] py-1">
                                             {item.children.map((child) => {
                                                 const isChildActiveRoute = location.pathname === child.path;
                                                 return (
@@ -354,10 +369,10 @@ const UserDashboardLayout = () => {
                                                         key={child.id}
                                                         to={child.path}
                                                         onClick={() => isMobile && setSidebarOpen(false)}
-                                                        className={`block px-10 py-2 text-[11px] font-semibold transition-colors
+                                                        className={`block px-10 py-2 text-[10px] font-semibold transition-colors
                                                             ${isChildActiveRoute
-                                                                ? 'bg-[#0a6729] text-white'
-                                                                : 'text-white/90 hover:bg-[#0a6e2c] hover:text-white'
+                                                                ? 'bg-[#1d1d1d] text-[#f5e6c8]'
+                                                                : 'text-[#f5e6c8]/86 hover:bg-[#191919] hover:text-[#f5e6c8]'
                                                             }`}
                                                     >
                                                         {child.name}
@@ -373,7 +388,7 @@ const UserDashboardLayout = () => {
                         <div className="mt-2 px-2">
                             <button
                                 onClick={handleLogout}
-                                className={`group flex w-full items-center rounded-md border border-transparent text-white transition-colors hover:bg-[#0a7c2f]
+                                className={`group flex w-full items-center rounded-md border border-transparent text-[#f5e6c8] transition-colors hover:bg-[#181818]
                                     ${sidebarOpen ? 'px-3 py-2 text-left' : 'mx-auto w-[56px] justify-center px-0 py-2'}`}
                             >
                                 <LogOut className={`${sidebarOpen ? 'mr-3 h-4 w-4' : 'h-4 w-4'}`} strokeWidth={2.2} />
@@ -385,43 +400,39 @@ const UserDashboardLayout = () => {
             </aside>
 
             <main
-                className={`min-h-[calc(100vh-88px)] flex-1 transition-all duration-300 md:min-h-[calc(100vh-115px)]
-                    ${sidebarOpen ? 'md:ml-[258px]' : 'md:ml-[76px]'}`}
+                className={`min-h-[calc(100vh-94px)] flex-1 transition-all duration-300 md:min-h-[calc(100vh-121px)]
+                    ${sidebarOpen ? 'md:ml-[214px]' : 'md:ml-[82px]'}`}
             >
-                <div className="sticky top-[88px] z-30 md:top-[115px]">
-                    <div className="h-2 bg-[#ff7f11]"></div>
-                    <div className="flex items-center justify-between border-b border-[#d4d4d4] bg-white px-4 py-2 md:px-6">
+                <div className="sticky top-[94px] z-30 md:top-[121px]">
+                    <div className="flex items-center justify-between border-b border-[#c8a96a]/12 bg-[#111111] px-4 py-3 md:px-8">
                         <div className="flex items-center gap-3">
                             {isMobile && (
                                 <button
                                     onClick={() => setSidebarOpen((prev) => !prev)}
-                                    className="flex h-9 w-9 items-center justify-center rounded border border-[#d9d9d9] bg-white text-[#1f2937]"
+                                    className="flex h-9 w-9 items-center justify-center rounded border border-[#c8a96a]/18 bg-[#171717] text-[#f5e6c8]"
                                 >
                                     <Menu size={18} />
                                 </button>
                             )}
                             <div>
-                                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#ff7f11]">
-                                    Member Area
-                                </div>
-                                <div className="text-[15px] font-bold text-[#1f2937]">
+                                <div className="text-[22px] font-black text-[#f5e6c8]">
                                     {pageTitle}
                                 </div>
                             </div>
                         </div>
 
                         <div className="text-right">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#6b7280]">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8a96a]/65">
                                 Welcome
                             </div>
-                            <div className="text-[13px] font-bold uppercase text-[#0c8f37]">
+                            <div className="text-[13px] font-bold uppercase text-[#f5e6c8]">
                                 {userData.userName || userData.memberId || 'Member'}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="px-3 py-4 md:px-4 md:py-5">
+                <div className="bg-[#0d0d0d] px-3 py-4 md:px-6 md:py-6">
                     <Outlet />
                 </div>
             </main>
@@ -429,7 +440,7 @@ const UserDashboardLayout = () => {
             {isMobile && sidebarOpen && (
                 <button
                     type="button"
-                    className="fixed inset-0 z-40 bg-black/30"
+                    className="fixed inset-0 z-40 bg-black/55"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
@@ -448,6 +459,7 @@ const UserDashboardLayout = () => {
                     }
                 }
             `}</style>
+            </div>
         </div>
     );
 };

@@ -59,7 +59,7 @@ const HeroSection = ({ currentSlide, setCurrentSlide, heroSlides, isLoggedIn, us
                                 className="px-8 md:px-10 py-3.5 md:py-4 bg-[#C8A96A] text-[#0D0D0D] font-bold rounded-sm hover:bg-[#F5E6C8] transition-all duration-300 shadow-[0_10px_30px_rgba(200,169,106,0.3)] flex items-center space-x-3 text-sm uppercase tracking-widest group"
                             >
                                 <span className="font-black text-[14px]">
-                                    Join Us
+                                    {isLoggedIn ? 'User Dashboard' : 'Join Us'}
                                 </span>
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             </Motion.button>

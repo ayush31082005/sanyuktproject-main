@@ -192,8 +192,8 @@ const MyAccount = ({ defaultTab }) => {
     const [kycData, setKycData] = useState({
         aadharNumber: '',
         panNumber: '',
-        nominee: { name: '', relation: '' },
-        bankDetails: { accountNumber: '', ifscCode: '', bankName: '', upiId: '' },
+        nominee: { name: '', relation: '', dob: '', address: '', state: '', city: '' },
+        bankDetails: { accountNumber: '', ifscCode: '', bankName: '', accountType: '', panNumber: '' },
         kycDocuments: { aadharFront: '', aadharBack: '', panCard: '', passbook: '' }
     });
     const [kycSubmitting, setKycSubmitting] = useState(false);
@@ -207,7 +207,15 @@ const MyAccount = ({ defaultTab }) => {
     // ─── Handlers ──────────────────────────────────────────────────────────────
 
     const handleEditStart = () => {
-        setEditData({ userName: userData.userName || '', fatherName: userData.fatherName || '', mobile: userData.mobile || '', gender: userData.gender || '' });
+        setEditData({
+            userName: userData.userName || '',
+            fatherName: userData.fatherName || '',
+            mobile: userData.mobile || '',
+            gender: userData.gender || '',
+            dob: userData.dob ? new Date(userData.dob).toISOString().slice(0, 10) : '',
+            qualification: userData.qualification || '',
+            shippingAddress: userData.shippingAddress || ''
+        });
         setEditMode(true);
     };
     const handleEditCancel = () => { setEditMode(false); setEditData({}); };
@@ -219,7 +227,7 @@ const MyAccount = ({ defaultTab }) => {
             if (profileImage) payload.profileImage = profileImage;
             const res = await api.put('/profile', payload);
             const updatedUser = res.data.user;
-            setUserData(updatedUser);
+            applyUserProfile(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             window.dispatchEvent(new Event('storage'));
             setEditMode(false);
@@ -246,15 +254,29 @@ const MyAccount = ({ defaultTab }) => {
     };
 
     const handleKycSubmit = async () => {
-        if (!kycData.aadharNumber || !kycData.panNumber || !kycData.nominee.name || !kycData.nominee.relation || !kycData.bankDetails.accountNumber) {
-            setSnackbar({ open: true, message: 'Please fill all required KYC fields including nominee details', severity: 'warning' });
+        if (
+            !kycData.aadharNumber ||
+            !kycData.panNumber ||
+            !kycData.nominee.name ||
+            !kycData.nominee.relation ||
+            !kycData.nominee.dob ||
+            !kycData.nominee.address ||
+            !kycData.nominee.state ||
+            !kycData.nominee.city ||
+            !kycData.bankDetails.accountNumber ||
+            !kycData.bankDetails.ifscCode ||
+            !kycData.bankDetails.bankName ||
+            !kycData.bankDetails.accountType ||
+            !kycData.bankDetails.panNumber
+        ) {
+            setSnackbar({ open: true, message: 'Please fill all required KYC fields including nominee and bank details', severity: 'warning' });
             return;
         }
         setKycSubmitting(true);
         try {
             const res = await api.put('/kyc', kycData);
             const updatedUser = res.data.user;
-            setUserData(updatedUser);
+            applyUserProfile(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             setSnackbar({ open: true, message: 'KYC submitted successfully!', severity: 'success' });
         } catch (err) {
@@ -303,29 +325,56 @@ const MyAccount = ({ defaultTab }) => {
         } finally { setWalletTxLoading(false); }
     };
 
+    const applyUserProfile = (parsedUser) => {
+        setUserData(parsedUser);
+        setProfileImage(parsedUser.profileImage || null);
+        setKycData({
+            aadharNumber: parsedUser.aadharNumber || '',
+            panNumber: parsedUser.panNumber || '',
+            nominee: {
+                name: parsedUser.nominee?.name || '',
+                relation: parsedUser.nominee?.relation || '',
+                dob: parsedUser.nominee?.dob ? new Date(parsedUser.nominee.dob).toISOString().slice(0, 10) : '',
+                address: parsedUser.nominee?.address || '',
+                state: parsedUser.nominee?.state || '',
+                city: parsedUser.nominee?.city || ''
+            },
+            bankDetails: {
+                accountNumber: parsedUser.bankDetails?.accountNumber || '',
+                ifscCode: parsedUser.bankDetails?.ifscCode || '',
+                bankName: parsedUser.bankDetails?.bankName || '',
+                accountType: parsedUser.bankDetails?.accountType || '',
+                panNumber: parsedUser.bankDetails?.panNumber || parsedUser.bankDetails?.apnNumber || ''
+            },
+            kycDocuments: parsedUser.kycDocuments || { aadharFront: '', aadharBack: '', panCard: '', passbook: '' }
+        });
+    };
+
     // ─── useEffect ──────────────────────────────────────────────────────────────
 
     useEffect(() => {
         const token = localStorage.getItem('token');
         const user = localStorage.getItem('user');
         if (!token || !user) { navigate('/login'); return; }
+        const syncLatestProfile = async () => {
+            try {
+                const res = await api.get('/profile');
+                const latestUser = res.data?.user || res.data;
+                if (latestUser) {
+                    applyUserProfile(latestUser);
+                    localStorage.setItem('user', JSON.stringify(latestUser));
+                }
+            } catch (e) {
+                console.error('Error syncing profile:', e);
+            }
+        };
         try {
             const parsedUser = JSON.parse(user);
-            setUserData(parsedUser);
-            if (parsedUser.profileImage) setProfileImage(parsedUser.profileImage);
-            setKycData({
-                aadharNumber: parsedUser.aadharNumber || '',
-                panNumber: parsedUser.panNumber || '',
-                nominee: {
-                    name: parsedUser.nominee?.name || '',
-                    relation: parsedUser.nominee?.relation || ''
-                },
-                bankDetails: parsedUser.bankDetails || { accountNumber: '', ifscCode: '', bankName: '', upiId: '' },
-                kycDocuments: parsedUser.kycDocuments || { aadharFront: '', aadharBack: '', panCard: '', passbook: '' }
-            });
+            applyUserProfile(parsedUser);
             fetchUserGrievances(parsedUser.email);
             fetchUserOrders();
             fetchUserTransactions();
+            syncLatestProfile();
             fetchAllWalletTransactions(); // ← Wallet API call
             setTimeout(() => setShowContent(true), 300);
         } catch (e) { console.error('Error parsing user:', e); localStorage.clear(); navigate('/login'); }
@@ -346,6 +395,12 @@ const MyAccount = ({ defaultTab }) => {
     };
 
     const formatValue = (v) => (v === undefined || v === null || v === '') ? 'Not provided' : v;
+    const formatDateValue = (value) => {
+        if (!value) return 'Not provided';
+        const parsedDate = new Date(value);
+        if (Number.isNaN(parsedDate.getTime())) return 'Not provided';
+        return parsedDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
 
     const getStatusIcon = (status) => {
         switch (status) {
@@ -383,18 +438,6 @@ const MyAccount = ({ defaultTab }) => {
                 </Alert>
             )}
 
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: '#F5E6C8' }}>Identity Details</Typography>
-            <Paper variant="outlined" sx={{ borderRadius: '12px', p: 3, mb: 4 }}>
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
-                        <TextField fullWidth label="Aadhar Number" value={kycData.aadharNumber} onChange={(e) => setKycData({ ...kycData, aadharNumber: e.target.value })} disabled={kycReadOnly} />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField fullWidth label="PAN Number" value={kycData.panNumber} onChange={(e) => setKycData({ ...kycData, panNumber: e.target.value.toUpperCase() })} disabled={kycReadOnly} />
-                    </Grid>
-                </Grid>
-            </Paper>
-
             <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, color: '#F5E6C8' }}>Nominee Details</Typography>
             <Paper variant="outlined" sx={{ borderRadius: '12px', p: 3, mb: 4 }}>
                 <Grid container spacing={3}>
@@ -417,6 +460,44 @@ const MyAccount = ({ defaultTab }) => {
                             disabled={kycReadOnly}
                         />
                     </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Nominee DOB"
+                            type="date"
+                            value={kycData.nominee.dob}
+                            onChange={(e) => setKycData({ ...kycData, nominee: { ...kycData.nominee, dob: e.target.value } })}
+                            disabled={kycReadOnly}
+                            InputLabelProps={{ shrink: true }}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Nominee Address"
+                            value={kycData.nominee.address}
+                            onChange={(e) => setKycData({ ...kycData, nominee: { ...kycData.nominee, address: e.target.value } })}
+                            disabled={kycReadOnly}
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Nominee State"
+                            value={kycData.nominee.state}
+                            onChange={(e) => setKycData({ ...kycData, nominee: { ...kycData.nominee, state: e.target.value } })}
+                            disabled={kycReadOnly}
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Nominee City"
+                            value={kycData.nominee.city}
+                            onChange={(e) => setKycData({ ...kycData, nominee: { ...kycData.nominee, city: e.target.value } })}
+                            disabled={kycReadOnly}
+                        />
+                    </Grid>
                 </Grid>
             </Paper>
 
@@ -432,15 +513,23 @@ const MyAccount = ({ defaultTab }) => {
                     <Grid item xs={12} md={4}>
                         <TextField fullWidth label="Bank Name" value={kycData.bankDetails.bankName} onChange={(e) => setKycData({ ...kycData, bankDetails: { ...kycData.bankDetails, bankName: e.target.value } })} disabled={kycReadOnly} />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid item xs={12} md={6}>
                         <TextField
                             fullWidth
-                            label="UPI ID"
-                            placeholder="e.g., username@upi"
-                            value={kycData.bankDetails.upiId}
-                            onChange={(e) => setKycData({ ...kycData, bankDetails: { ...kycData.bankDetails, upiId: e.target.value } })}
+                            label="Account Type"
+                            placeholder="e.g., Savings / Current"
+                            value={kycData.bankDetails.accountType}
+                            onChange={(e) => setKycData({ ...kycData, bankDetails: { ...kycData.bankDetails, accountType: e.target.value } })}
                             disabled={kycReadOnly}
-                            helperText="This UPI ID will be used for your donation link."
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="PAN Number"
+                            value={kycData.bankDetails.panNumber}
+                            onChange={(e) => setKycData({ ...kycData, bankDetails: { ...kycData.bankDetails, panNumber: e.target.value.toUpperCase() } })}
+                            disabled={kycReadOnly}
                         />
                     </Grid>
                 </Grid>
@@ -671,13 +760,32 @@ const MyAccount = ({ defaultTab }) => {
                                         <Box sx={{ px: 3, py: 1.5 }}>
                                             {editMode ? (
                                                 <Grid container spacing={1.5} sx={{ py: 1.5 }}>
-                                                    {[{ label: 'User Name', key: 'userName' }, { label: "Father's Name", key: 'fatherName' }, { label: 'Phone', key: 'mobile' }, { label: 'Gender', key: 'gender', type: 'select', options: ['Male', 'Female', 'Other'] }].map((field) => (
+                                                    {[
+                                                        { label: 'User Name', key: 'userName' },
+                                                        { label: "Father's Name", key: 'fatherName' },
+                                                        { label: 'Phone', key: 'mobile' },
+                                                        { label: 'Gender', key: 'gender', type: 'select', options: ['Male', 'Female', 'Other'] },
+                                                        { label: 'Date of Birth', key: 'dob', type: 'date' },
+                                                        { label: 'Qualification', key: 'qualification' },
+                                                        { label: 'Shipping Address', key: 'shippingAddress' }
+                                                    ].map((field) => (
                                                         <Grid item xs={12} key={field.key}>
                                                             {field.type === 'select' ? (
                                                                 <TextField select fullWidth size="small" label={field.label} value={editData[field.key] || ''} onChange={(e) => setEditData(p => ({ ...p, [field.key]: e.target.value }))} SelectProps={{ native: true }} sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}>
                                                                     <option value=""></option>
                                                                     {field.options.map(o => <option key={o} value={o}>{o}</option>)}
                                                                 </TextField>
+                                                            ) : field.type === 'date' ? (
+                                                                <TextField
+                                                                    fullWidth
+                                                                    size="small"
+                                                                    label={field.label}
+                                                                    type="date"
+                                                                    value={editData[field.key] || ''}
+                                                                    onChange={(e) => setEditData(p => ({ ...p, [field.key]: e.target.value }))}
+                                                                    InputLabelProps={{ shrink: true }}
+                                                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+                                                                />
                                                             ) : (
                                                                 <TextField fullWidth size="small" label={field.label} value={editData[field.key] || ''} onChange={(e) => setEditData(p => ({ ...p, [field.key]: e.target.value }))} sx={{ '& .MuiOutlinedInput-root': { borderRadius: '10px' } }} />
                                                             )}
@@ -694,7 +802,10 @@ const MyAccount = ({ defaultTab }) => {
                                                         { label: 'Official Email Address', value: formatValue(userData.email), icon: <EmailIcon /> },
                                                         { label: 'Contact Phone Number', value: formatValue(userData.mobile), icon: <PhoneIcon /> },
                                                         { label: 'Gender', value: formatValue(userData.gender), icon: <WcIcon /> },
+                                                        { label: 'Date of Birth', value: formatDateValue(userData.dob), icon: <EventIcon /> },
+                                                        { label: 'Qualification', value: formatValue(userData.qualification), icon: <BadgeIcon /> },
                                                         { label: 'Position / Designation', value: formatValue(userData.position), icon: <BadgeIcon /> },
+                                                        { label: 'Shipping Address', value: formatValue(userData.shippingAddress), icon: <HomeIcon /> },
                                                     ].map((field, fi) => (
                                                         <Grid item xs={12} sm={6} key={fi}>
                                                             <Box sx={{ mb: 1 }}>
@@ -721,48 +832,6 @@ const MyAccount = ({ defaultTab }) => {
                                                     ))}
                                                 </Grid>
                                             )}
-                                        </Box>
-                                    </Paper>
-
-                                    {/* Account Details */}
-                                    <Paper variant="outlined" sx={{ borderRadius: '18px', overflow: 'hidden', mb: 3 }}>
-                                        <Box sx={{ px: 3, py: 2, bgcolor: '#0D0D0D', borderBottom: '1px solid ' + 'rgba(200, 169, 106, 0.15)' + '' }}>
-                                            <Typography sx={{ fontWeight: 800, fontSize: '16px', color: '#F5E6C8', display: 'flex', alignItems: 'center', gap: 1.2 }}>
-                                                <FingerprintIcon sx={{ fontSize: 22, color: '#C8A96A' }} /> Account Details
-                                            </Typography>
-                                        </Box>
-                                        <Box sx={{ px: 3, py: 1.5 }}>
-                                            <Grid container spacing={4} sx={{ py: 3, px: 1 }}>
-                                                {[
-                                                    { label: 'Self Sponsor ID', value: formatValue(userData.memberId), icon: <FingerprintIcon />, accent: '#C8A96A' },
-                                                    { label: 'Referrer Member ID', value: formatValue(userData.sponsorId), icon: <GroupsIcon />, accent: '#F7931E' },
-                                                    { label: 'Sponsor Full Name', value: formatValue(userData.sponsorName), icon: <PersonIcon />, accent: '#F7931E' },
-                                                    { label: 'Registered State', value: formatValue(userData.state), icon: <FlagIcon />, accent: '#F7931E' },
-                                                ].map((field, fi) => (
-                                                    <Grid item xs={12} sm={6} key={fi}>
-                                                        <Box sx={{ mb: 1 }}>
-                                                            <Typography sx={{ color: '#C8A96A', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', mb: 1.2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                                {React.cloneElement(field.icon, { sx: { fontSize: 16, color: field.accent } })} {field.label}
-                                                            </Typography>
-                                                            <Box sx={{
-                                                                px: 2.5,
-                                                                py: 1.8,
-                                                                bgcolor: '#1A1A1A',
-                                                                border: `1.5px solid rgba(200, 169, 106, 0.15)`,
-                                                                borderRadius: '12px',
-                                                                transition: 'all 0.2s ease-in-out',
-                                                                '&:hover': {
-                                                                    bgcolor: '#0D0D0D',
-                                                                    borderColor: '#C8A96A',
-                                                                    boxShadow: `0 4px 12px rgba(200, 169, 106, 0.15)`
-                                                                }
-                                                            }}>
-                                                                <Typography sx={{ color: '#F5E6C8', fontSize: '14px', fontWeight: 700, fontFamily: "'Inter', sans-serif" }}>{field.value}</Typography>
-                                                            </Box>
-                                                        </Box>
-                                                    </Grid>
-                                                ))}
-                                            </Grid>
                                         </Box>
                                     </Paper>
 
@@ -1524,9 +1593,27 @@ const MyAccount = ({ defaultTab }) => {
                             {/* ── Grievances ── */}
                             {tabValue === 4 && (
                                 <Box>
-                                    <Typography variant="h6" sx={{ color: '#C8A96A', mb: 3, fontWeight: 700, borderBottom: '3px solid #C8A96A', pb: 1, display: 'inline-block' }}>
-                                        My Grievances / Tickets
-                                    </Typography>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'stretch', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 3 }}>
+                                        <Typography variant="h6" sx={{ color: '#C8A96A', fontWeight: 700, borderBottom: '3px solid #C8A96A', pb: 1, display: 'inline-block', width: 'fit-content' }}>
+                                            My Grievances / Tickets
+                                        </Typography>
+                                        <Button
+                                            variant="contained"
+                                            startIcon={<AssignmentIcon />}
+                                            sx={{
+                                                alignSelf: { xs: 'flex-start', sm: 'auto' },
+                                                bgcolor: '#C8A96A',
+                                                '&:hover': { bgcolor: 'rgba(200,169,106,0.8)' },
+                                                borderRadius: '8px',
+                                                fontWeight: 700,
+                                                textTransform: 'none',
+                                                boxShadow: 'none'
+                                            }}
+                                            onClick={() => navigate('/grievance')}
+                                        >
+                                            Submit Complain
+                                        </Button>
+                                    </Box>
                                     {grievancesLoading ? (
                                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={40} sx={{ color: '#C8A96A' }} /></Box>
                                     ) : userGrievances.length === 0 ? (

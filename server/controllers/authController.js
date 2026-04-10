@@ -343,7 +343,7 @@ exports.profile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
     try {
         const allowedFields = [
-            "userName", "fatherName", "mobile", "gender", "position",
+            "userName", "fatherName", "mobile", "gender", "position", "dob", "qualification",
             "shippingAddress", "state", "district", "assemblyArea",
             "block", "villageCouncil", "village", "profileImage", "bankDetails"
         ];
@@ -370,8 +370,24 @@ exports.submitKyc = async (req, res) => {
     try {
         const { aadharNumber, panNumber, nominee, bankDetails, kycDocuments } = req.body;
 
-        if (!aadharNumber || !panNumber || !bankDetails?.accountNumber || !nominee?.name || !nominee?.relation) {
-            return res.status(400).json({ message: "Aadhar, PAN, bank details, nominee name and nominee relation are required" });
+        if (
+            !aadharNumber ||
+            !panNumber ||
+            !bankDetails?.accountNumber ||
+            !bankDetails?.ifscCode ||
+            !bankDetails?.bankName ||
+            !bankDetails?.accountType ||
+            !(bankDetails?.panNumber || bankDetails?.apnNumber) ||
+            !nominee?.name ||
+            !nominee?.relation ||
+            !nominee?.dob ||
+            !nominee?.address ||
+            !nominee?.state ||
+            !nominee?.city
+        ) {
+            return res.status(400).json({
+                message: "Aadhar, PAN, nominee details, and complete bank information are required"
+            });
         }
 
         const updates = {

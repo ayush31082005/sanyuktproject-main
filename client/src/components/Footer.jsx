@@ -177,9 +177,9 @@ const Footer = () => {
         { name: 'Company Profile', path: '/company/profile' },
         { name: 'Our Products', path: '/products' },
         { name: 'Opportunities', path: '/opportunities' },
+        { name: 'Grievance', path: '/grievance' },
         { name: 'Seminar List', path: '/seminars' },
         { name: 'Gallery', path: '/gallery' },
-        { name: 'Downloads', path: '/downloads' },
         { name: 'Contact Us', path: '/contact' },
     ];
 
@@ -194,8 +194,6 @@ const Footer = () => {
         { name: 'Cancellation Policy', path: '/cancellation-policy' },
         { name: 'Shipping & Delivery Policy', path: '/shipment-delivery-policy' },
         { name: 'Testimonial Policy', path: '/testimonial-policy' },
-        { name: 'Grievance', path: '/grievance' },
-        { name: 'FAQ', path: '/faq' },
     ];
 
     const handleNavigation = (path) => {
@@ -301,11 +299,11 @@ const Footer = () => {
                     width: '100%',
                     display: 'flex',
                     flexDirection: { xs: 'column', md: 'row' },
-                    justifyContent: 'space-between',
+                    justifyContent: 'center',
                     alignItems: 'center',
                     gap: { xs: 1.5, md: 0 }
                 }}>
-                    <CopyrightText component="div">
+                    <CopyrightText component="div" sx={{ textAlign: 'center' }}>
                         © 2026 Sanyukt Parivaar & Rich Life Pvt.Ltd.. All Rights Reserved.
                     </CopyrightText>
                     {/* <CopyrightText component="div" sx={{ fontSize: '12px', display: 'flex', alignItems: 'center', opacity: 1, letterSpacing: '0.5px' }}>

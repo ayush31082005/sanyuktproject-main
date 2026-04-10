@@ -134,7 +134,7 @@ const ForgotPassword = () => {
 
                             <h2 className="text-3xl font-serif font-bold text-[#F5E6C8] mb-3 tracking-tight">
                                 {step === 1 ? (
-                                    <>Credential <span className="text-[#C8A96A]">Recovery</span></>
+                                    <>Change <span className="text-[#C8A96A]">Password</span></>
                                 ) : step === 2 ? (
                                     <>Security <span className="text-[#C8A96A]">Mandate</span></>
                                 ) : (
@@ -169,7 +169,7 @@ const ForgotPassword = () => {
                             {/* STEP 1: EMAIL INPUT */}
                             {step === 1 && (
                                 <div className="space-y-3 mb-8 animate-slide-left group/input">
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#C8A96A]">Establish Identity</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-[#C8A96A]">Email</label>
                                     <div className="relative">
                                         <Mail className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#C8A96A]/40 group-focus-within/input:text-[#C8A96A] transition-colors" />
                                         <input
@@ -179,7 +179,7 @@ const ForgotPassword = () => {
                                                 setEmail(e.target.value);
                                                 setError('');
                                             }}
-                                            placeholder="Vault Address (Email)"
+                                            placeholder="Enter your email"
                                             className="w-full pl-14 pr-6 py-4 bg-[#0D0D0D] border border-[#C8A96A]/20 rounded-2xl text-[#F5E6C8] font-medium placeholder:text-[#F5E6C8]/20 focus:border-[#C8A96A] focus:ring-4 focus:ring-[#C8A96A]/10 outline-none transition-all shadow-2xl"
                                             required
                                         />
@@ -294,7 +294,7 @@ const ForgotPassword = () => {
                                         </span>
                                     ) : (
                                         <>
-                                            {step === 1 ? 'Dispatch Mandate' : step === 2 ? 'Authorize Mandate' : 'Establish Access'}
+                                            {step === 1 ? 'Continue' : step === 2 ? 'Continue' : 'Continue'}
                                             <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                                         </>
                                     )}

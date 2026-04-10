@@ -1,15 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Activity,
-    ArrowLeftRight,
-    BadgeIndianRupee,
-    Boxes,
+    Bell,
     CircleDollarSign,
     CreditCard,
-    Layers3,
+    IndianRupee,
     Network,
     ShoppingBag,
-    UserRoundCheck,
+    UserCheck,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -25,6 +22,7 @@ const firstNumber = (...values) => {
             }
         }
     }
+
     return 0;
 };
 
@@ -40,63 +38,84 @@ const formatMoney = (value) =>
         maximumFractionDigits: 2,
     });
 
-const formatMetric = (value, digits = 2) =>
-    firstNumber(value).toLocaleString('en-IN', {
-        minimumFractionDigits: digits,
-        maximumFractionDigits: digits,
-    });
+const formatSimplePair = (left, right, digits = 2) => {
+    const formatter = (value) =>
+        firstNumber(value).toLocaleString('en-IN', {
+            minimumFractionDigits: digits,
+            maximumFractionDigits: digits,
+        });
 
-const formatWhole = (value) =>
-    firstNumber(value).toLocaleString('en-IN', {
-        maximumFractionDigits: 0,
-    });
+    return `${formatter(left)} / ${formatter(right)}`;
+};
 
 const countPairs = (pv, unit) => Math.floor((firstNumber(pv) + 0.000001) / unit);
 
-const tilePalette = {
-    green: 'bg-[linear-gradient(135deg,#2fd36e_0%,#34c86b_100%)]',
-    blue: 'bg-[linear-gradient(135deg,#2e9df0_0%,#59b2f3_100%)]',
-    red: 'bg-[linear-gradient(135deg,#ef5b61_0%,#f67075_100%)]',
-    orange: 'bg-[linear-gradient(135deg,#f7a145_0%,#ffb05d_100%)]',
+const boxThemes = {
+    mint: {
+        surface: 'bg-[linear-gradient(135deg,#4f7c61_0%,#9ee3b8_55%,#dff8e7_100%)]',
+        text: 'text-[#0d0d0d]',
+        subtext: 'text-[#0d0d0d]/80',
+    },
+    emerald: {
+        surface: 'bg-[linear-gradient(135deg,#295e40_0%,#49c87b_52%,#c6f3d6_100%)]',
+        text: 'text-[#0d0d0d]',
+        subtext: 'text-[#0d0d0d]/82',
+    },
+    jade: {
+        surface: 'bg-[linear-gradient(135deg,#1f5648_0%,#63d3aa_52%,#d3f7ea_100%)]',
+        text: 'text-[#0d0d0d]',
+        subtext: 'text-[#0d0d0d]/82',
+    },
+    lime: {
+        surface: 'bg-[linear-gradient(135deg,#4c6a24_0%,#a8da62_52%,#edf8d2_100%)]',
+        text: 'text-[#0d0d0d]',
+        subtext: 'text-[#0d0d0d]/82',
+    },
 };
 
-const StatTile = ({ title, value, footer, icon: Icon, color }) => (
-    <div className={`relative overflow-hidden rounded-[3px] border border-white/35 px-4 py-3 text-white shadow-[0_10px_26px_rgba(0,0,0,0.18)] ${color}`}>
-        <div className="pointer-events-none absolute right-0 top-0 h-20 w-20 rounded-full bg-white/10 blur-2xl" />
-        <div className="relative flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-                {Icon ? <Icon size={15} className="shrink-0 opacity-95" /> : null}
-                <span className="text-[10px] font-black uppercase tracking-[0.18em]">{title}</span>
+const MoneyBox = ({ theme, label, value }) => (
+    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[66px] ${theme.surface} ${theme.text}`}>
+        <div className="flex items-start justify-between gap-3">
+            <IndianRupee size={24} strokeWidth={2.2} className="mt-1 shrink-0" />
+            <div className="text-right">
+                <div className="text-[22px] font-black leading-none">{value}</div>
+                <div className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
             </div>
-            <span className="text-[30px] font-black leading-none">{value}</span>
-        </div>
-        <div className="relative mt-2 text-right text-[9px] font-bold uppercase tracking-[0.16em] text-white/90">
-            {footer}
         </div>
     </div>
 );
 
-const PairStrip = ({ title, leftValue, rightValue, color }) => (
-    <div className={`rounded-[3px] border border-white/35 px-4 py-4 text-center text-white shadow-[0_10px_26px_rgba(0,0,0,0.14)] ${color}`}>
-        <div className="text-[30px] font-black leading-none">
-            {leftValue} / {rightValue}
+const CountBox = ({ theme, icon: Icon, label, value }) => (
+    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[66px] ${theme.surface} ${theme.text}`}>
+        <div className="flex items-start justify-between gap-3">
+            <Icon size={20} strokeWidth={2.2} className="mt-1 shrink-0" />
+            <div className="text-right">
+                <div className="text-[22px] font-black leading-none">{value}</div>
+                <div className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
+            </div>
         </div>
-        <div className="mt-2 text-[9px] font-bold uppercase tracking-[0.16em] text-white/90">{title}</div>
+    </div>
+);
+
+const PairBox = ({ theme, label, value }) => (
+    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-4 text-center shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[84px] flex flex-col items-center justify-center ${theme.surface} ${theme.text}`}>
+        <div className="text-[26px] font-black leading-none">{value}</div>
+        <div className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
     </div>
 );
 
 const NoticePanel = ({ notices }) => (
-    <div className="overflow-hidden rounded-[3px] border border-[#bfc4ca] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.12)]">
-        <div className="bg-[#4f5c63] px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] text-white">
+    <div className="overflow-hidden rounded-[2px] border border-[#c8a96a]/16 bg-[#111111] shadow-[0_14px_36px_rgba(0,0,0,0.35)]">
+        <div className="bg-[#1a1a1a] px-3 py-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#c8a96a]">
             Notifications
         </div>
-        <div className="space-y-[1px] bg-[#d8dde1] p-[1px]">
+        <div className="space-y-px bg-[#c8a96a]/10 p-px">
             {notices.map((notice, index) => (
-                <div key={`${notice}-${index}`} className="flex gap-3 bg-[#fbfbfb] px-3 py-3">
-                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e8f2ff] text-[#3b9df1]">
-                        <Activity size={12} />
+                <div key={`${notice}-${index}`} className="flex items-start gap-2 bg-[#161616] px-3 py-2">
+                    <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#c8a96a]/12 text-[#c8a96a]">
+                        <Bell size={9} />
                     </div>
-                    <p className="text-[11px] leading-5 text-[#4b5563]">{notice}</p>
+                    <p className="text-[11px] leading-5 text-[#f5e6c8]/78">{notice}</p>
                 </div>
             ))}
         </div>
@@ -114,7 +133,7 @@ const DashboardOverview = () => {
         downline: 0,
         activeDirects: 0,
     });
-    const [userData, setUserData] = useState(() => {
+    const [userData] = useState(() => {
         try {
             const raw = localStorage.getItem('user');
             return raw ? JSON.parse(raw) : null;
@@ -170,8 +189,6 @@ const DashboardOverview = () => {
         const availableRightPV = firstNumber(matchingReport?.availableRightPV);
         const totalLeftPV = firstNumber(matchingReport?.totalLeftPV, stats?.leftPV);
         const totalRightPV = firstNumber(matchingReport?.totalRightPV, stats?.rightPV);
-        const leftBV = firstNumber(matchingReport?.leftBV, stats?.leftBV);
-        const rightBV = firstNumber(matchingReport?.rightBV, stats?.rightBV);
 
         return {
             repurchaseWallet: firstNumber(userData?.repurchaseWalletBalance),
@@ -200,30 +217,26 @@ const DashboardOverview = () => {
             currentDiamondRight: countPairs(availableRightPV, 1),
             totalDiamondLeft: countPairs(totalLeftPV, 1),
             totalDiamondRight: countPairs(totalRightPV, 1),
-            leftBV,
-            rightBV,
-            totalPurchases: firstNumber(stats?.productPurchases),
-            totalOrders: firstNumber(stats?.totalOrders),
-            matchedPV: firstNumber(matchingReport?.matchedPV, stats?.matchedPV),
         };
     }, [matchingReport, networkCounts, stats, userData]);
 
     const notices = useMemo(() => {
         const currentRank = stats?.rank || userData?.rank || 'Member';
+
         return [
-            `Welcome ${userData?.userName || userData?.memberId || 'Member'}, your current rank is ${currentRank}.`,
-            `Network summary: ${formatWhole(viewModel.downline)} total team members with ${formatWhole(viewModel.activeDirects)} active directs.`,
-            `Current carry forward volume is ${formatMetric(viewModel.currentPvLeft)} PV on left and ${formatMetric(viewModel.currentPvRight)} PV on right.`,
-            `Total matched PV recorded so far is ${formatMetric(viewModel.matchedPV)} with ${formatWhole(viewModel.totalOrders)} total orders.`,
+            `Welcome ${userData?.userName || userData?.memberId || 'Member'}, current rank is ${currentRank}.`,
+            `Network summary: ${networkCounts.downline} total members, ${networkCounts.activeDirects} active directs.`,
+            `Current PV carry is ${formatSimplePair(viewModel.currentPvLeft, viewModel.currentPvRight)}.`,
+            `Total PV summary is ${formatSimplePair(viewModel.totalPvLeft, viewModel.totalPvRight)}.`,
         ];
-    }, [stats?.rank, userData?.rank, userData?.userName, userData?.memberId, viewModel]);
+    }, [networkCounts.activeDirects, networkCounts.downline, stats?.rank, userData?.memberId, userData?.rank, userData?.userName, viewModel.currentPvLeft, viewModel.currentPvRight, viewModel.totalPvLeft, viewModel.totalPvRight]);
 
     if (loading) {
         return (
-            <div className="flex min-h-[68vh] items-center justify-center rounded-[3px] border border-[#d7d9dd] bg-white">
+            <div className="flex min-h-[68vh] items-center justify-center rounded-[2px] border border-[#c8a96a]/16 bg-[#111111]">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#d7d9dd] border-t-[#2e9df0]" />
-                    <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#64748b]">
+                    <div className="h-11 w-11 animate-spin rounded-full border-4 border-[#2b2b2b] border-t-[#c8a96a]" />
+                    <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#c8a96a]">
                         Loading Dashboard
                     </span>
                 </div>
@@ -231,170 +244,42 @@ const DashboardOverview = () => {
         );
     }
 
-    if (!userData) {
-        return null;
-    }
+    if (!userData) return null;
 
     return (
-        <div className="mx-auto max-w-[1520px]">
-            <div className="grid gap-4 xl:grid-cols-[420px,minmax(0,1fr)]">
-                <div className="space-y-4">
+        <div className="mx-auto w-full max-w-[1280px] rounded-[2px] border border-[#c8a96a]/14 bg-[radial-gradient(circle_at_top,#1c1c1c_0%,#121212_55%,#0d0d0d_100%)] p-3 shadow-[0_20px_48px_rgba(0,0,0,0.34)]">
+            <div className="grid gap-3 lg:grid-cols-3">
+                <div className="space-y-2">
+                    <MoneyBox theme={boxThemes.mint} label="Repurchase-Wallet" value={formatMoney(viewModel.repurchaseWallet)} />
+                    <MoneyBox theme={boxThemes.emerald} label="Product Wallet" value={formatMoney(viewModel.productWallet)} />
                     <ProfileBanner userData={userData} stats={stats} matchingReport={matchingReport} />
                 </div>
 
-                <div className="space-y-4">
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <StatTile
-                            title="Repurchase Wallet"
-                            value={formatMoney(viewModel.repurchaseWallet)}
-                            footer="Repurchase Wallet"
-                            color={tilePalette.green}
-                            icon={Wallet}
-                        />
-                        <StatTile
-                            title="E-Wallet"
-                            value={formatMoney(viewModel.eWallet)}
-                            footer="E-Wallet"
-                            color={tilePalette.blue}
-                            icon={CreditCard}
-                        />
-                        <StatTile
-                            title="Generation Wallet"
-                            value={formatMoney(viewModel.generationWallet)}
-                            footer="Generation Wallet"
-                            color={tilePalette.red}
-                            icon={CircleDollarSign}
-                        />
-                        <StatTile
-                            title="Product Wallet"
-                            value={formatMoney(viewModel.productWallet)}
-                            footer="Product Wallet"
-                            color={tilePalette.green}
-                            icon={ShoppingBag}
-                        />
-                        <StatTile
-                            title="Net Commission"
-                            value={formatMoney(viewModel.netCommission)}
-                            footer="Net Commission"
-                            color={tilePalette.orange}
-                            icon={BadgeIndianRupee}
-                        />
-                        <StatTile
-                            title="Paid Withdrawals"
-                            value={formatMoney(viewModel.paidWithdrawals)}
-                            footer="Paid Withdrawals"
-                            color={tilePalette.red}
-                            icon={Wallet}
-                        />
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <StatTile
-                            title="Downline"
-                            value={formatWhole(viewModel.downline)}
-                            footer="Downline"
-                            color={tilePalette.blue}
-                            icon={Network}
-                        />
-                        <StatTile
-                            title="Left"
-                            value={formatWhole(viewModel.leftCount)}
-                            footer="Left"
-                            color={tilePalette.green}
-                            icon={Users}
-                        />
-                        <StatTile
-                            title="Active Directs"
-                            value={formatWhole(viewModel.activeDirects)}
-                            footer="Active Directs"
-                            color={tilePalette.red}
-                            icon={UserRoundCheck}
-                        />
-                        <StatTile
-                            title="Right"
-                            value={formatWhole(viewModel.rightCount)}
-                            footer="Right"
-                            color={tilePalette.orange}
-                            icon={Users}
-                        />
-                        <StatTile
-                            title="Total Orders"
-                            value={formatWhole(viewModel.totalOrders)}
-                            footer="Orders"
-                            color={tilePalette.blue}
-                            icon={Boxes}
-                        />
-                        <StatTile
-                            title="Left / Right BV"
-                            value={`${formatWhole(viewModel.leftBV)} / ${formatWhole(viewModel.rightBV)}`}
-                            footer="Current BV"
-                            color={tilePalette.green}
-                            icon={ArrowLeftRight}
-                        />
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                        <PairStrip
-                            title="Today PV Left / Right"
-                            leftValue={formatMetric(viewModel.currentPvLeft)}
-                            rightValue={formatMetric(viewModel.currentPvRight)}
-                            color={tilePalette.blue}
-                        />
-                        <PairStrip
-                            title="Current Silver Left / Right"
-                            leftValue={formatWhole(viewModel.currentSilverLeft)}
-                            rightValue={formatWhole(viewModel.currentSilverRight)}
-                            color={tilePalette.blue}
-                        />
-                        <PairStrip
-                            title="Total PV Left / Right"
-                            leftValue={formatMetric(viewModel.totalPvLeft)}
-                            rightValue={formatMetric(viewModel.totalPvRight)}
-                            color={tilePalette.green}
-                        />
-                        <PairStrip
-                            title="Silver Total Left / Right"
-                            leftValue={formatWhole(viewModel.totalSilverLeft)}
-                            rightValue={formatWhole(viewModel.totalSilverRight)}
-                            color={tilePalette.green}
-                        />
-                        <PairStrip
-                            title="Current Gold Left / Right"
-                            leftValue={formatWhole(viewModel.currentGoldLeft)}
-                            rightValue={formatWhole(viewModel.currentGoldRight)}
-                            color={tilePalette.orange}
-                        />
-                        <PairStrip
-                            title="Total Gold Left / Right"
-                            leftValue={formatWhole(viewModel.totalGoldLeft)}
-                            rightValue={formatWhole(viewModel.totalGoldRight)}
-                            color={tilePalette.red}
-                        />
-                        <PairStrip
-                            title="Current Diamond Left / Right"
-                            leftValue={formatWhole(viewModel.currentDiamondLeft)}
-                            rightValue={formatWhole(viewModel.currentDiamondRight)}
-                            color={tilePalette.blue}
-                        />
-                        <PairStrip
-                            title="Total Diamond Left / Right"
-                            leftValue={formatWhole(viewModel.totalDiamondLeft)}
-                            rightValue={formatWhole(viewModel.totalDiamondRight)}
-                            color={tilePalette.green}
-                        />
-                    </div>
-
-                    <NoticePanel notices={notices} />
-
-                    <div className="rounded-[3px] border border-[#cfd4da] bg-[#fafafa] px-4 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#64748b]">
-                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                            <span>Sanyukt Member Dashboard</span>
-                            <span className="text-[#0c8f37]">
-                                Rank: {stats?.rank || userData?.rank || 'Member'} | Matched PV: {formatMetric(viewModel.matchedPV)}
-                            </span>
-                        </div>
-                    </div>
+                <div className="space-y-2">
+                    <MoneyBox theme={boxThemes.jade} label="E-Wallet" value={formatMoney(viewModel.eWallet)} />
+                    <MoneyBox theme={boxThemes.lime} label="Net Commission" value={formatMoney(viewModel.netCommission)} />
+                    <CountBox theme={boxThemes.jade} icon={Network} label="Downline" value={networkCounts.downline} />
+                    <CountBox theme={boxThemes.lime} icon={Users} label="Right" value={networkCounts.right} />
+                    <PairBox theme={boxThemes.jade} label="Today PV Left / Right" value={formatSimplePair(viewModel.currentPvLeft, viewModel.currentPvRight)} />
+                    <PairBox theme={boxThemes.mint} label="Total PV Left / Right" value={formatSimplePair(viewModel.totalPvLeft, viewModel.totalPvRight)} />
+                    <PairBox theme={boxThemes.lime} label="Current Gold Left / Right" value={formatSimplePair(viewModel.currentGoldLeft, viewModel.currentGoldRight, 0)} />
+                    <PairBox theme={boxThemes.jade} label="Current Diamond Left / Right" value={formatSimplePair(viewModel.currentDiamondLeft, viewModel.currentDiamondRight, 0)} />
                 </div>
+
+                <div className="space-y-2">
+                    <MoneyBox theme={boxThemes.emerald} label="Generation-Wallet" value={formatMoney(viewModel.generationWallet)} />
+                    <MoneyBox theme={boxThemes.mint} label="Paid Withdrawal" value={formatMoney(viewModel.paidWithdrawals)} />
+                    <CountBox theme={boxThemes.mint} icon={Users} label="Left" value={networkCounts.left} />
+                    <CountBox theme={boxThemes.emerald} icon={UserCheck} label="Active Direct" value={networkCounts.activeDirects} />
+                    <PairBox theme={boxThemes.jade} label="Current Silver Left / Right" value={formatSimplePair(viewModel.currentSilverLeft, viewModel.currentSilverRight, 0)} />
+                    <PairBox theme={boxThemes.mint} label="Silver Team Left / Right" value={formatSimplePair(viewModel.totalSilverLeft, viewModel.totalSilverRight, 0)} />
+                    <PairBox theme={boxThemes.lime} label="Total Gold Left / Right" value={formatSimplePair(viewModel.totalGoldLeft, viewModel.totalGoldRight, 0)} />
+                    <PairBox theme={boxThemes.emerald} label="Total Diamond Left / Right" value={formatSimplePair(viewModel.totalDiamondLeft, viewModel.totalDiamondRight, 0)} />
+                </div>
+            </div>
+
+            <div className="mt-3 lg:ml-[calc((100%+0.75rem)/3)] lg:w-[calc(((100%-1.5rem)*2/3)+0.75rem)]">
+                <NoticePanel notices={notices} />
             </div>
         </div>
     );

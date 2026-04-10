@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        dob: {
+            type: Date,
+            default: null,
+        },
+        qualification: {
+            type: String,
+            trim: true,
+        },
         position: {
             type: String,
             enum: ["Left", "Right", "left", "right"],
@@ -185,10 +193,39 @@ const userSchema = new mongoose.Schema(
             trim: true,
             uppercase: true
         },
+        nominee: {
+            name: {
+                type: String,
+                trim: true,
+            },
+            relation: {
+                type: String,
+                trim: true,
+            },
+            dob: {
+                type: Date,
+                default: null,
+            },
+            address: {
+                type: String,
+                trim: true,
+            },
+            state: {
+                type: String,
+                trim: true,
+            },
+            city: {
+                type: String,
+                trim: true,
+            }
+        },
         bankDetails: {
             accountNumber: String,
             ifscCode: String,
             bankName: String,
+            accountType: String,
+            panNumber: String,
+            apnNumber: String,
             upiId: String
         },
         kycDocuments: {

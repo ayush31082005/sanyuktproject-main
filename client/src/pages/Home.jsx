@@ -750,12 +750,15 @@ const HomePage = () => {
                 <div className="w-full flex items-center justify-center gap-2 sm:gap-5 my-1 sm:my-2 px-4 sm:px-5">
                     <div className="hidden sm:block flex-1 max-w-[180px] h-px bg-gradient-to-r from-transparent via-[#b88a44] to-transparent" />
 
-                    <span
-                        className="text-center text-xl sm:text-2xl md:text-[32px] italic font-medium text-[#d4a64a] leading-tight"
+                    <a
+                        href="https://chat.whatsapp.com/BUYM3EPL8ZaAwH4kpjMWum"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-center text-xl sm:text-2xl md:text-[32px] italic font-medium text-[#d4a64a] leading-tight transition hover:text-[#f0c979]"
                         style={{ fontFamily: '"Cormorant Garamond", serif' }}
                     >
                         Join Our Community!
-                    </span>
+                    </a>
 
                     <div className="hidden sm:block flex-1 max-w-[180px] h-px bg-gradient-to-r from-transparent via-[#b88a44] to-transparent" />
                 </div>
