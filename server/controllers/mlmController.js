@@ -159,6 +159,7 @@ exports.getMLMStats = async (req, res) => {
 
         const stats = {
             walletBalance: Number(user.walletBalance || 0),
+            generationWalletBalance: Number(user.generationWalletBalance || 0),
             pv: Number(user.pv || 0),
             bv: Number(user.bv || 0),
             totalGenerationIncome: Number(user.totalGenerationIncome || 0),

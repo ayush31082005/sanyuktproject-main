@@ -5,7 +5,7 @@ const WALLET_FIELDS = {
     "e-wallet": "walletBalance",
     "product-wallet": "productWalletBalance",
     "repurchase-wallet": "repurchaseWalletBalance",
-    "generation-wallet": "walletBalance",
+    "generation-wallet": "generationWalletBalance",
 };
 
 const normalizeWalletType = (walletType) => {

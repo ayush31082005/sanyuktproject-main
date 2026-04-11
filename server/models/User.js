@@ -120,6 +120,18 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        generationWalletBalance: {
+            type: Number,
+            default: 0
+        },
+        selfRepurchaseBV: {
+            type: Number,
+            default: 0
+        },
+        selfRepurchaseAmount: {
+            type: Number,
+            default: 0
+        },
         // Binary tree placement
         parent: {
             type: mongoose.Schema.Types.ObjectId,
@@ -294,6 +306,42 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
+        totalSelfRepurchaseIncome: {
+            type: Number,
+            default: 0
+        },
+        totalSponsorIncome: {
+            type: Number,
+            default: 0
+        },
+        totalRepurchaseLevelIncome: {
+            type: Number,
+            default: 0
+        },
+        totalRoyaltyBonus: {
+            type: Number,
+            default: 0
+        },
+        totalHouseFund: {
+            type: Number,
+            default: 0
+        },
+        totalLeadershipFund: {
+            type: Number,
+            default: 0
+        },
+        totalCarFund: {
+            type: Number,
+            default: 0
+        },
+        totalTravelFund: {
+            type: Number,
+            default: 0
+        },
+        totalBikeFund: {
+            type: Number,
+            default: 0
+        },
         dailyCapping: {
             type: Number,
             default: 0
@@ -314,5 +362,6 @@ userSchema.index({ leftChildId: 1 });
 userSchema.index({ rightChildId: 1 });
 userSchema.index({ role: 1 });
 userSchema.index({ activeStatus: 1 });
+userSchema.index({ rank: 1, activeStatus: 1 });
 
 module.exports = mongoose.model("User", userSchema);

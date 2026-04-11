@@ -1,6 +1,5 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
-const Repurchase = require("../models/Repurchase");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const { processOrderMLM } = require("../utils/mlmOrderUtils");
@@ -8,9 +7,6 @@ const { createWalletLedgerEntry, getWalletBalance, normalizeWalletType } = requi
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
-
-// ✅ Import repurchase income processor
-const { processRepurchaseGenerationIncome } = require("./repurchaseController");
 
 // Initialize Razorpay lazily to prevent server crash if keys are missing
 let razorpay;
@@ -110,22 +106,6 @@ exports.createOrder = async (req, res) => {
                 orderType: order.orderType,
                 orderTotal: Number(order.total || total || 0),
             });
-        }
-
-        try {
-            const newRepurchase = await Repurchase.create({
-                userId: req.user._id,
-                orderId: order._id,
-                amount: total,
-                bv: 300,
-                status: 'completed',
-            });
-
-            processRepurchaseGenerationIncome(newRepurchase._id).catch(err =>
-                console.error("❌ Repurchase income error:", err.message)
-            );
-        } catch (repurchaseErr) {
-            console.error("❌ Repurchase create skipped:", repurchaseErr.message);
         }
 
         try {
@@ -245,23 +225,6 @@ exports.placeFirstPurchase = async (req, res) => {
             });
         } catch (mlmErr) {
             console.error("❌ MLM trigger error:", mlmErr.message);
-        }
-
-        // Repurchase record + generation income (non-blocking)
-        try {
-            const newRepurchase = await Repurchase.create({
-                userId: req.user._id,
-                orderId: createdOrders[0]._id,
-                amount: totalAmount,
-                bv: totalBV || 300,
-                status: 'completed',
-            });
-
-            processRepurchaseGenerationIncome(newRepurchase._id).catch(err =>
-                console.error("❌ Generation income error:", err.message)
-            );
-        } catch (repErr) {
-            console.error("❌ Repurchase record skipped:", repErr.message);
         }
 
         // Confirmation email (non-blocking)

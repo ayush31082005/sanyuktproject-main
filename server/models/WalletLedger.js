@@ -38,9 +38,20 @@ const walletLedgerSchema = new mongoose.Schema(
             default: "manual",
             index: true,
         },
+        entryType: {
+            type: String,
+            default: "",
+            index: true,
+        },
         sourceId: {
             type: mongoose.Schema.Types.ObjectId,
             default: null,
+        },
+        referenceId: {
+            type: String,
+            default: "",
+            trim: true,
+            index: true,
         },
         description: {
             type: String,
@@ -55,5 +66,6 @@ const walletLedgerSchema = new mongoose.Schema(
 );
 
 walletLedgerSchema.index({ userId: 1, walletType: 1, createdAt: -1 });
+walletLedgerSchema.index({ userId: 1, referenceId: 1 });
 
 module.exports = mongoose.model("WalletLedger", walletLedgerSchema);

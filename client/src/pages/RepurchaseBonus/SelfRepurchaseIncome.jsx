@@ -29,24 +29,25 @@ const SelfRepurchaseIncome = () => {
     const [totalBV, setTotalBV] = useState(0);
     const [transactions, setTransactions] = useState([]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const res = await api.get('/repurchase/self-income');
-                const data = res.data?.data || {};
-                setTotalIncome(data.totalSelfRepurchase || 0);
-                setTotalBV(data.totalBV || 0);
-                setTransactions(Array.isArray(data.recentRepurchases) ? data.recentRepurchases : []);
-            } catch (error) {
-                console.error('Error fetching self repurchase income:', error);
-                setTotalIncome(0);
-                setTotalBV(0);
-                setTransactions([]);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const fetchData = async (params = {}) => {
+        try {
+            setLoading(true);
+            const res = await api.get('/repurchase/self-income', { params });
+            const data = res.data?.data || {};
+            setTotalIncome(data.totalSelfRepurchase || data.totalAmount || 0);
+            setTotalBV(data.totalBV || 0);
+            setTransactions(Array.isArray(data.records) ? data.records : []);
+        } catch (error) {
+            console.error('Error fetching self repurchase income:', error);
+            setTotalIncome(0);
+            setTotalBV(0);
+            setTransactions([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchData();
     }, []);
 
@@ -60,22 +61,17 @@ const SelfRepurchaseIncome = () => {
         }
     })();
 
-    const filteredTransactions = useMemo(() => {
-        if (searchMode !== 'between' || !fromDate || !toDate) return transactions;
+    const filteredTransactions = useMemo(() => transactions, [transactions]);
 
-        const start = new Date(fromDate);
-        const end = new Date(toDate);
-        end.setHours(23, 59, 59, 999);
-
-        return transactions.filter((item) => {
-            const rowDate = new Date(item.createdAt || item.date);
-            return rowDate >= start && rowDate <= end;
-        });
-    }, [fromDate, searchMode, toDate, transactions]);
-
-    const handleSearch = (event) => {
+    const handleSearch = async (event) => {
         event.preventDefault();
         setSearched(true);
+        if (searchMode === 'between' && fromDate && toDate) {
+            await fetchData({ fromDate, toDate });
+            return;
+        }
+
+        await fetchData();
     };
 
     return (
@@ -174,7 +170,7 @@ const SelfRepurchaseIncome = () => {
                             <div className="py-10 text-center text-sm text-[#ECFDF5]/55">Loading report...</div>
                         ) : filteredTransactions.length === 0 ? (
                             <div className="py-10 text-center text-sm text-[#ECFDF5]/55">
-                                {searched ? 'No self repurchase records found.' : 'No self repurchase records available.'}
+                                {searched ? 'No self repurchase income records found.' : 'No self repurchase income records available.'}
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -185,7 +181,7 @@ const SelfRepurchaseIncome = () => {
                                             <th className="border border-[#10B981]/15 px-3 py-2">Date</th>
                                             <th className="border border-[#10B981]/15 px-3 py-2">Order ID</th>
                                             <th className="border border-[#10B981]/15 px-3 py-2">BV</th>
-                                            <th className="border border-[#10B981]/15 px-3 py-2">Repurchase Amount</th>
+                                            <th className="border border-[#10B981]/15 px-3 py-2">Self Income</th>
                                         </tr>
                                     </thead>
                                     <tbody>

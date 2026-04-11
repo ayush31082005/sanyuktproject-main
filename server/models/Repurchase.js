@@ -16,9 +16,19 @@ const repurchaseSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    walletType: {
+        type: String,
+        enum: ['e-wallet', 'product-wallet', 'repurchase-wallet', 'generation-wallet'],
+        default: 'repurchase-wallet'
+    },
     bv: {
         type: Number,
         required: true
+    },
+    referenceId: {
+        type: String,
+        trim: true,
+        default: ''
     },
     status: {
         type: String,
@@ -33,5 +43,6 @@ const repurchaseSchema = new mongoose.Schema({
 
 repurchaseSchema.index({ userId: 1 });
 repurchaseSchema.index({ orderId: 1 });
+repurchaseSchema.index({ referenceId: 1 });
 
 module.exports = mongoose.model('Repurchase', repurchaseSchema);
