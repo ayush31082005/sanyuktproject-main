@@ -34,7 +34,6 @@ const BonusPlaceholder = ({ title }) => {
 
 export const SponsorIncome = () => <BonusPlaceholder title="Sponsor Income" />;
 export const RoyaltyBonus = () => <BonusPlaceholder title="Royalty Bonus" />;
-export const DirectorBonus = () => <BonusPlaceholder title="Director Bonus" />;
 export const HouseFund = () => <BonusPlaceholder title="House Fund" />;
 export const LeadershipFund = () => <BonusPlaceholder title="Leadership Fund" />;
 export const CarFund = () => <BonusPlaceholder title="Car Fund" />;

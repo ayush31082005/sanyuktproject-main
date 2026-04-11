@@ -46,7 +46,6 @@ import SelfRepurchaseIncome from '../pages/RepurchaseBonus/SelfRepurchaseIncome.
 import RepurchaseLevelIncome from '../pages/RepurchaseBonus/RepurchaseLevelIncome.jsx';
 import SponsorIncome from '../pages/RepurchaseBonus/SponsorIncome.jsx';
 import RoyaltyBonus from '../pages/RepurchaseBonus/RoyaltyBonus.jsx';
-import DirectorBonus from '../pages/RepurchaseBonus/DirectorBonus.jsx';
 import HouseFund from '../pages/RepurchaseBonus/HouseFund.jsx';
 import LeadershipFund from '../pages/RepurchaseBonus/LeadershipFund.jsx';
 import CarFund from '../pages/RepurchaseBonus/CarFund.jsx';
@@ -172,7 +171,6 @@ const MainRoutes = () => {
                 <Route path="bonus/repurchase/level" element={<RepurchaseLevelIncome />} />
                 <Route path="bonus/repurchase/sponsor" element={<SponsorIncome />} />
                 <Route path="bonus/repurchase/royalty" element={<RoyaltyBonus />} />
-                <Route path="bonus/repurchase/director" element={<DirectorBonus />} />
                 <Route path="bonus/repurchase/house" element={<HouseFund />} />
                 <Route path="bonus/repurchase/leadership" element={<LeadershipFund />} />
                 <Route path="bonus/repurchase/car" element={<CarFund />} />

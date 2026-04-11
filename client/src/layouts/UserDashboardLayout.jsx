@@ -120,7 +120,6 @@ const UserDashboardLayout = () => {
                 { name: 'Repurchase Level Income', path: '/my-account/bonus/repurchase/level', id: 'repurchase_level' },
                 { name: 'Sponsor Income', path: '/my-account/bonus/repurchase/sponsor', id: 'repurchase_sponsor' },
                 { name: 'Royalty Bonus', path: '/my-account/bonus/repurchase/royalty', id: 'repurchase_royalty' },
-                { name: 'Director Bonus', path: '/my-account/bonus/repurchase/director', id: 'repurchase_director' },
                 { name: 'House Fund', path: '/my-account/bonus/repurchase/house', id: 'repurchase_house' },
                 { name: 'Leadership Fund', path: '/my-account/bonus/repurchase/leadership', id: 'repurchase_leadership' },
                 { name: 'Car Fund', path: '/my-account/bonus/repurchase/car', id: 'repurchase_car' },
