@@ -191,12 +191,21 @@ const DashboardOverview = () => {
         const totalRightPV = firstNumber(matchingReport?.totalRightPV, stats?.rightPV);
 
         return {
-            repurchaseWallet: firstNumber(userData?.repurchaseWalletBalance),
+            repurchaseWallet: firstNumber(
+                stats?.repurchaseWalletBalance,
+                userData?.repurchaseWalletBalance,
+                stats?.legacyRepurchaseIncome
+            ),
             eWallet: firstNumber(stats?.walletBalance, userData?.walletBalance),
-            generationWallet: firstNumber(userData?.generationWalletBalance, stats?.totalGenerationIncome),
+            generationWallet: firstNumber(
+                stats?.generationWalletBalance,
+                userData?.generationWalletBalance,
+                stats?.legacyGenerationIncome,
+                stats?.totalGenerationIncome
+            ),
             productWallet: firstNumber(userData?.productWalletBalance),
             netCommission: firstNumber(stats?.totalGenerationIncome),
-            paidWithdrawals: firstNumber(userData?.paidWithdrawals),
+            paidWithdrawals: firstNumber(stats?.paidWithdrawals, userData?.paidWithdrawals),
             downline: firstNumber(networkCounts.downline, stats?.totalDownline),
             leftCount: firstNumber(networkCounts.left, stats?.totalLeft),
             rightCount: firstNumber(networkCounts.right, stats?.totalRight),

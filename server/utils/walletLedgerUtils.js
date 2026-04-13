@@ -59,6 +59,8 @@ const createWalletLedgerEntry = async ({
     amount,
     sourceType,
     sourceId = null,
+    entryType = "",
+    referenceId = "",
     description = "",
     meta = {},
     skipBalanceUpdate = false,
@@ -104,7 +106,9 @@ const createWalletLedgerEntry = async ({
         balanceBefore,
         balanceAfter,
         sourceType,
+        entryType,
         sourceId,
+        referenceId,
         description,
         meta,
     });

@@ -55,6 +55,7 @@ import BikeFund from '../pages/RepurchaseBonus/BikeFund.jsx';
 import MyRank from '../pages/Myrank';
 
 import WalletManagement from '../pages/Wallet/WalletManagement';
+import WalletWithdrawalPage from '../pages/Wallet/WalletWithdrawalPage';
 import AllTransactionReport from '../pages/Wallet/AllTransactionReport';
 import DeductionReport from '../pages/Wallet/DeductionReport';
 import WithdrawalHistory from '../pages/Wallet/WithdrawalHistory';
@@ -178,6 +179,17 @@ const MainRoutes = () => {
                 <Route path="bonus/repurchase/bike" element={<BikeFund />} />
 
                 <Route path="wallet/deduction-report" element={<DeductionReport />} />
+                <Route
+                    path="wallet/withdraw"
+                    element={
+                        <WalletWithdrawalPage
+                            walletType="e-wallet"
+                            title="E-Wallet Withdrawal"
+                            intro="Request payout directly from your e-wallet balance."
+                            historyTitle="E-Wallet Withdrawal History"
+                        />
+                    }
+                />
                 <Route path="wallet/withdrawal-history" element={<WithdrawalHistory />} />
                 <Route path="wallet/daily-closing" element={<DailyClosingReport />} />
                 <Route path='wallet/all-transactions' element={<AllTransactionReport />} />
@@ -186,11 +198,23 @@ const MainRoutes = () => {
 
                 <Route path='generation' element={<GenerationWallet />} />
                 <Route path='generation/deduction-report' element={<GenerationDeduction />} />
+                <Route
+                    path='generation/withdraw'
+                    element={
+                        <WalletWithdrawalPage
+                            walletType="generation-wallet"
+                            title="Generation Wallet Withdrawal"
+                            intro="Request payout from your generation wallet income balance."
+                            historyTitle="Generation Wallet Withdrawal History"
+                        />
+                    }
+                />
                 <Route path='generation/withdrawal-history' element={<GenerationWithdrawal />} />
                 <Route path='generation/all-transactions' element={<GenerationTransactions />} />
                 <Route path='generation/monthly-closing' element={<MonthlyClosing />} />
                 <Route path='wallet/generation' element={<Navigate to="/my-account/generation" replace />} />
                 <Route path='wallet/generation/deduction-report' element={<Navigate to="/my-account/generation/deduction-report" replace />} />
+                <Route path='wallet/generation/withdraw' element={<Navigate to="/my-account/generation/withdraw" replace />} />
                 <Route path='wallet/generation/withdrawal-history' element={<Navigate to="/my-account/generation/withdrawal-history" replace />} />
                 <Route path='wallet/generation/all-transactions' element={<Navigate to="/my-account/generation/all-transactions" replace />} />
                 <Route path='wallet/generation/monthly-closing' element={<Navigate to="/my-account/generation/monthly-closing" replace />} />

@@ -28,7 +28,12 @@ const WithdrawalHistory = () => {
         const fetchData = async () => {
             try {
                 const res = await api.get('/wallet/withdrawal-history', {
-                    params: { status: 'All Status', method: 'All Methods', period: 'All Time' },
+                    params: {
+                        walletType: 'e-wallet',
+                        status: 'All Status',
+                        method: 'All Methods',
+                        period: 'All Time',
+                    },
                 });
                 setWithdrawals(Array.isArray(res.data?.withdrawals) ? res.data.withdrawals : []);
             } catch (error) {

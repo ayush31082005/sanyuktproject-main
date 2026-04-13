@@ -38,7 +38,12 @@ const GenerationWithdrawal = () => {
         const fetchData = async () => {
             try {
                 const res = await api.get('/wallet/withdrawal-history', {
-                    params: { status: 'All Status', method: 'All Methods', period: 'All Time' },
+                    params: {
+                        walletType: 'generation-wallet',
+                        status: 'All Status',
+                        method: 'All Methods',
+                        period: 'All Time',
+                    },
                 });
                 setWithdrawals(Array.isArray(res.data?.withdrawals) ? res.data.withdrawals : []);
             } catch (error) {

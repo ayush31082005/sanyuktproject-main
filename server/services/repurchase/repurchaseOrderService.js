@@ -87,7 +87,7 @@ const placeRepurchaseOrder = async ({
         await session.withTransaction(async () => {
             const user = await User.findById(userId)
                 .select(
-                    "+password userName memberId email mobile shippingAddress state district walletBalance productWalletBalance repurchaseWalletBalance generationWalletBalance selfRepurchaseBV selfRepurchaseAmount"
+                    "password sponsorId parent parentId userName memberId email mobile shippingAddress state district walletBalance productWalletBalance repurchaseWalletBalance generationWalletBalance selfRepurchaseBV selfRepurchaseAmount"
                 )
                 .session(session);
 

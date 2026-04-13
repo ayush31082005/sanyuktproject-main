@@ -12,13 +12,50 @@ const {
     normalizeWalletType,
 } = require('../utils/walletLedgerUtils');
 
+const GENERATION_INCOME_TYPES = [
+    'Generation',
+    'Repurchase',
+    'self_repurchase',
+    'repurchase_level',
+    'sponsor_income',
+    'royalty_bonus',
+    'house_fund',
+    'leadership_fund',
+    'car_fund',
+    'travel_fund',
+    'bike_fund',
+];
+
+const WITHDRAWAL_WALLET_TYPES = ['e-wallet', 'generation-wallet'];
+
+const buildWithdrawalQuery = (userId, walletType = 'e-wallet') => {
+    const normalizedWalletType = normalizeWalletType(walletType || 'e-wallet');
+
+    if (normalizedWalletType === 'e-wallet') {
+        return {
+            userId,
+            $or: [
+                { walletType: { $exists: false } },
+                { walletType: '' },
+                { walletType: 'e-wallet' },
+            ],
+        };
+    }
+
+    return {
+        userId,
+        walletType: normalizedWalletType,
+    };
+};
+
 exports.getAllWithdrawals = async (req, res) => {
     try {
-        const { status, method, search } = req.query;
+        const { status, method, search, walletType = 'All' } = req.query;
         let query = {};
 
         if (status && status !== 'All') query.status = status;
         if (method && method !== 'All') query.method = method;
+        if (walletType && walletType !== 'All') query.walletType = normalizeWalletType(walletType);
 
         if (search) {
             const users = await User.find({
@@ -135,9 +172,14 @@ exports.getDeductionReport = async (req, res) => {
 exports.getWithdrawalHistory = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { status = '', method = '', period = '' } = req.query;
+        const { status = '', method = '', period = '', walletType = 'e-wallet' } = req.query;
+        const normalizedWalletType = normalizeWalletType(walletType || 'e-wallet');
 
-        let query = { userId };
+        if (!WITHDRAWAL_WALLET_TYPES.includes(normalizedWalletType)) {
+            return res.status(400).json({ success: false, message: 'Invalid withdrawal wallet type' });
+        }
+
+        let query = buildWithdrawalQuery(userId, normalizedWalletType);
 
 
         if (status && status !== 'All Status') query.status = status;
@@ -160,7 +202,7 @@ exports.getWithdrawalHistory = async (req, res) => {
         const withdrawals = await Withdrawal.find(query).sort({ createdAt: -1 });
 
         // Summary
-        const allWithdrawals = await Withdrawal.find({ userId });
+        const allWithdrawals = await Withdrawal.find(buildWithdrawalQuery(userId, normalizedWalletType));
         const totalWithdrawn = allWithdrawals.reduce((s, w) => s + w.amount, 0);
         const successful = allWithdrawals
             .filter(w => w.status === 'Completed')
@@ -173,6 +215,7 @@ exports.getWithdrawalHistory = async (req, res) => {
 
         res.json({
             success: true,
+            walletType: normalizedWalletType,
             summary: {
                 totalWithdrawn,
                 successful,
@@ -190,19 +233,39 @@ exports.getWithdrawalHistory = async (req, res) => {
 exports.requestWithdrawal = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { amount, method, accountNumber, ifscCode, bankName, upiId } = req.body;
+        const {
+            amount,
+            method,
+            accountNumber,
+            ifscCode,
+            bankName,
+            upiId,
+            walletType = 'e-wallet',
+        } = req.body;
+        const normalizedWalletType = normalizeWalletType(walletType || 'e-wallet');
+        const requestedAmount = Number(amount || 0);
 
-        if (!amount || isNaN(amount) || amount < 500) {
+        if (!WITHDRAWAL_WALLET_TYPES.includes(normalizedWalletType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid withdrawal wallet type'
+            });
+        }
+
+        if (!requestedAmount || isNaN(requestedAmount) || requestedAmount < 500) {
             return res.status(400).json({
                 success: false,
                 message: 'Minimum withdrawal amount is ₹500'
             });
         }
 
-        const user = await User.findById(userId);
+        const user = await User.findById(userId).select('userName memberId email');
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        if (user.walletBalance < amount) {
+        const walletSummary = await getWalletBalance(userId, normalizedWalletType);
+        user.walletBalance = walletSummary.balance;
+
+        if (walletSummary.balance < requestedAmount) {
             return res.status(400).json({
                 success: false,
                 message: `Insufficient wallet balance. You have ₹${user.walletBalance}`
@@ -210,25 +273,44 @@ exports.requestWithdrawal = async (req, res) => {
         }
 
         // TDS deduction (5%) + Processing fee (2%)
-        const tdsAmount = Math.round(amount * 0.05);
-        const processingFee = Math.round(amount * 0.02);
-        const netAmount = amount - tdsAmount - processingFee;
-
-        // Deduct from wallet
-        user.walletBalance -= amount;
-        await user.save();
+        const tdsAmount = Math.round(requestedAmount * 0.05);
+        const processingFee = Math.round(requestedAmount * 0.02);
+        const netAmount = requestedAmount - tdsAmount - processingFee;
 
         let withdrawal;
+        let walletDebit;
         try {
             // Create withdrawal record
             withdrawal = await Withdrawal.create({
                 userId,
+                walletType: normalizedWalletType,
+                requestedAmount,
                 amount: netAmount,
+                tdsAmount,
+                processingFee,
                 method,
                 accountNumber,
                 ifscCode,
                 bankName,
                 upiId
+            });
+
+            walletDebit = await createWalletLedgerEntry({
+                userId,
+                walletType: normalizedWalletType,
+                txType: 'debit',
+                amount: requestedAmount,
+                sourceType: 'withdrawal-request',
+                entryType: 'withdrawal',
+                sourceId: withdrawal._id,
+                referenceId: withdrawal.referenceNo,
+                description: `${normalizedWalletType} withdrawal request (${withdrawal.referenceNo})`,
+                meta: {
+                    method,
+                    netAmount,
+                    tdsAmount,
+                    processingFee,
+                },
             });
 
             // Create TDS deduction record
@@ -255,6 +337,7 @@ exports.requestWithdrawal = async (req, res) => {
                 success: true,
                 message: 'Withdrawal request submitted successfully',
                 withdrawal,
+                balanceAfter: walletDebit.balanceAfter,
                 deductions: { tds: tdsAmount, processingFee }
             });
 
@@ -262,9 +345,28 @@ exports.requestWithdrawal = async (req, res) => {
             console.error('--- WITHDRAWAL DB FAILURE ---');
             console.error(dbErr);
 
-            // ROLLBACK: Refund the user's balance
-            user.walletBalance += amount;
-            await user.save();
+            if (walletDebit && withdrawal) {
+                try {
+                    await createWalletLedgerEntry({
+                        userId,
+                        walletType: normalizedWalletType,
+                        txType: 'credit',
+                        amount: requestedAmount,
+                        sourceType: 'withdrawal-rollback',
+                        entryType: 'withdrawal-refund',
+                        sourceId: withdrawal._id,
+                        referenceId: withdrawal.referenceNo,
+                        description: `Rollback for failed withdrawal request (${withdrawal.referenceNo})`,
+                    });
+                } catch (rollbackErr) {
+                    console.error('Withdrawal rollback failed:', rollbackErr);
+                }
+            }
+
+            if (withdrawal) {
+                await Deduction.deleteMany({ relatedWithdrawalId: withdrawal._id });
+                await Withdrawal.findByIdAndDelete(withdrawal._id);
+            }
 
             return res.status(500).json({
                 success: false,
@@ -286,7 +388,7 @@ exports.getRecentTransactions = async (req, res) => {
         // Fetch recent records from multiple sources
         const [incomes, withdrawals, deductions, otherTx] = await Promise.all([
             IncomeHistory.find({ userId }).sort({ createdAt: -1 }).limit(limit),
-            Withdrawal.find({ userId }).sort({ createdAt: -1 }).limit(limit),
+            Withdrawal.find(buildWithdrawalQuery(userId, 'e-wallet')).sort({ createdAt: -1 }).limit(limit),
             Deduction.find({ userId }).sort({ createdAt: -1 }).limit(limit),
             Transaction.find({ userId, status: 'success' }).sort({ createdAt: -1 }).limit(limit)
         ]);
@@ -331,24 +433,56 @@ exports.getAllTransactions = async (req, res) => {
     try {
         const userId = req.user._id;
         const { search = '' } = req.query;
+        const walletTypeScope = normalizeWalletType(req.query.walletType || 'e-wallet');
 
-        // Income history (credits)
-        const incomeQuery = { userId };
+        const incomeConditions = [{ userId }];
+
+        if (walletTypeScope === 'generation-wallet') {
+            incomeConditions.push({
+                $or: [
+                    { walletType: 'generation-wallet' },
+                    { type: { $in: ['Generation', 'Repurchase'] } },
+                ],
+            });
+        } else {
+            incomeConditions.push({
+                $and: [
+                    {
+                        $or: [
+                            { walletType: { $exists: false } },
+                            { walletType: '' },
+                            { walletType: 'e-wallet' },
+                        ],
+                    },
+                    { type: { $nin: GENERATION_INCOME_TYPES } },
+                ],
+            });
+        }
+
         if (search) {
-            incomeQuery.$or = [
+            incomeConditions.push({
+                $or: [
                 { type: { $regex: search, $options: 'i' } },
                 { description: { $regex: search, $options: 'i' } }
-            ];
+                ],
+            });
         }
+
+        const incomeQuery =
+            incomeConditions.length === 1 ? incomeConditions[0] : { $and: incomeConditions };
+
         const incomes = await IncomeHistory.find(incomeQuery)
             .populate('fromUserId', 'userName memberId')
             .sort({ createdAt: -1 });
 
         // Other Payments/Recharges & Withdrawals (debits)
-        const [withdrawals, otherTransactions] = await Promise.all([
-            Withdrawal.find({ userId }).sort({ createdAt: -1 }),
-            Transaction.find({ userId, status: 'success' }).sort({ createdAt: -1 })
-        ]);
+        const [withdrawals, otherTransactions] =
+            walletTypeScope === 'generation-wallet'
+                ? [[], []]
+                : await Promise.all([
+                    Withdrawal.find(buildWithdrawalQuery(userId, 'e-wallet')).sort({ createdAt: -1 }),
+                    Transaction.find({ userId, status: 'success' }).sort({ createdAt: -1 })
+                ]);
 
         // Merge & sort by date
         const transactions = [
@@ -385,6 +519,7 @@ exports.getAllTransactions = async (req, res) => {
 
         res.json({
             success: true,
+            walletType: walletTypeScope,
             totalRecords: transactions.length,
             transactions
         });
@@ -464,25 +599,36 @@ exports.updateWithdrawalStatus = async (req, res) => {
 
         // If status is changed to Rejected, REFUND the amount to user's wallet
         if (status === 'Rejected' && withdrawal.status !== 'Rejected') {
-            const user = await User.findById(withdrawal.userId);
+            const user = await User.findById(withdrawal.userId).select('userName memberId email');
             if (user) {
-                // The amount deducted initially was 'netAmount + tds + fee' = original 'amount'
-                // But withdrawal.amount is 'netAmount'. We need the original amount.
-                // Let's find associated deductions to get the full amount back.
+                const refundWalletType = normalizeWalletType(withdrawal.walletType || 'e-wallet');
                 const deductions = await Deduction.find({ relatedWithdrawalId: withdrawal._id });
                 const totalDeductions = deductions.reduce((sum, d) => sum + d.amount, 0);
-                const refundAmount = withdrawal.amount + totalDeductions;
+                const refundAmount = Number(withdrawal.requestedAmount || 0) || (withdrawal.amount + totalDeductions);
 
-                user.walletBalance += refundAmount;
-                await user.save();
+                await createWalletLedgerEntry({
+                    userId: user._id,
+                    walletType: refundWalletType,
+                    txType: 'credit',
+                    amount: refundAmount,
+                    sourceType: 'withdrawal-rejected-refund',
+                    entryType: 'withdrawal-refund',
+                    sourceId: withdrawal._id,
+                    referenceId: withdrawal.referenceNo,
+                    description: `Refund for rejected withdrawal (${withdrawal.referenceNo})`,
+                });
 
-                // Create a refund transaction/history entry
                 await IncomeHistory.create({
                     userId: user._id,
                     amount: refundAmount,
                     type: 'Refund',
+                    walletType: refundWalletType,
                     description: `Refund for Rejected Withdrawal (${withdrawal.referenceNo})`,
-                    status: 'Processed'
+                    referenceId: withdrawal.referenceNo,
+                    meta: {
+                        walletType: refundWalletType,
+                        totalDeductions,
+                    },
                 });
             }
         }

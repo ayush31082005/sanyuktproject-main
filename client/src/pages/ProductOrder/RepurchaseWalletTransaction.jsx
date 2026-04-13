@@ -22,6 +22,25 @@ const formatDate = (value) =>
 
 const formatCurrency = (value) => Number(value || 0).toFixed(2);
 
+const REPURCHASE_INCOME_TYPES = new Set([
+    'repurchase',
+    'self_repurchase',
+    'repurchase_level',
+    'sponsor_income',
+    'royalty_bonus',
+    'house_fund',
+    'leadership_fund',
+    'car_fund',
+    'travel_fund',
+    'bike_fund',
+]);
+
+const isRepurchaseIncomeTransaction = (item) => {
+    const type = String(item?.type || '').toLowerCase();
+    const details = String(item?.details || '').toLowerCase();
+    return REPURCHASE_INCOME_TYPES.has(type) || details.includes('repurchase');
+};
+
 export default function RepurchaseWalletTransaction() {
     const [searchMode, setSearchMode] = useState('all');
     const [fromDate, setFromDate] = useState('');
@@ -34,13 +53,32 @@ export default function RepurchaseWalletTransaction() {
     const loadReport = async (params = {}) => {
         try {
             setLoading(true);
-            const [summaryRes, txRes] = await Promise.all([
-                api.get('/wallet/summary', { params: { walletType: 'repurchase-wallet' } }),
-                api.get('/wallet/repurchase/transactions', { params }),
-            ]);
+            const res = await api.get('/wallet/all-transactions', {
+                params: {
+                    search: '',
+                    walletType: 'generation-wallet',
+                    ...params,
+                },
+            });
 
-            setBalance(formatCurrency(summaryRes.data?.balance));
-            setTransactions(txRes.data?.transactions || []);
+            const rows = Array.isArray(res.data?.transactions) ? res.data.transactions : [];
+            const repurchaseRows = rows.filter(isRepurchaseIncomeTransaction).map((item) => ({
+                _id: item._id,
+                createdAt: item.date,
+                txType: item.txType,
+                sourceType: item.type,
+                description: item.details || item.source || '-',
+                amount: item.amount,
+                balanceAfter: null,
+            }));
+
+            const total = repurchaseRows.reduce(
+                (sum, item) => sum + (item.txType === 'credit' ? Number(item.amount || 0) : -Number(item.amount || 0)),
+                0
+            );
+
+            setBalance(formatCurrency(total));
+            setTransactions(repurchaseRows);
         } catch (error) {
             console.error('Repurchase wallet transaction error:', error);
             setTransactions([]);
@@ -119,7 +157,7 @@ export default function RepurchaseWalletTransaction() {
                     <div className="rounded-[2rem] border border-emerald-400/20 bg-[linear-gradient(135deg,#1f8f53_0%,#34c97a_48%,#5bd48f_100%)] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.28)]">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Available Repurchase Wallet</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Repurchase Income Total</p>
                                 <div className="mt-6 text-5xl font-black tracking-tight text-white">{balance}</div>
                             </div>
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
@@ -173,7 +211,7 @@ export default function RepurchaseWalletTransaction() {
                                                     <td className={`px-4 py-4 font-semibold ${item.txType === 'credit' ? 'text-emerald-300' : 'text-rose-300'}`}>
                                                         {item.txType === 'credit' ? '+' : '-'}Rs {formatCurrency(item.amount)}
                                                     </td>
-                                                    <td className="px-4 py-4">Rs {formatCurrency(item.balanceAfter)}</td>
+                                                    <td className="px-4 py-4">{item.balanceAfter == null ? '-' : `Rs ${formatCurrency(item.balanceAfter)}`}</td>
                                                 </tr>
                                             ))}
                                         </tbody>

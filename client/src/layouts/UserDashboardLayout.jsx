@@ -134,6 +134,7 @@ const UserDashboardLayout = () => {
             path: '/my-account/wallet',
             badge: stats?.walletBalance !== undefined ? `Rs ${Number(stats.walletBalance || 0).toFixed(2)}` : '0',
             children: [
+                { name: 'Withdraw Funds', path: '/my-account/wallet/withdraw', id: 'wallet_withdraw_request' },
                 { name: 'Deduction Report', path: '/my-account/wallet/deduction-report', id: 'wallet_deduction' },
                 { name: 'Withdrawal History', path: '/my-account/wallet/withdrawal-history', id: 'wallet_withdrawal' },
                 { name: 'All Transaction Report', path: '/my-account/wallet/all-transactions', id: 'wallet_all' },
@@ -152,8 +153,12 @@ const UserDashboardLayout = () => {
             name: 'Generation Wallet',
             icon: Briefcase,
             path: '/my-account/generation',
-            badge: normalizeBadge(stats?.generationCount || '4'),
+            badge:
+                stats?.generationWalletBalance !== undefined
+                    ? `Rs ${Number(stats.generationWalletBalance || 0).toFixed(2)}`
+                    : '0',
             children: [
+                { name: 'Withdraw Funds', path: '/my-account/generation/withdraw', id: 'generation_withdraw_request' },
                 { name: 'Deduction Report', path: '/my-account/generation/deduction-report', id: 'generation_deduction' },
                 { name: 'Withdrawal History', path: '/my-account/generation/withdrawal-history', id: 'generation_withdrawal' },
                 { name: 'All Transaction Report', path: '/my-account/generation/all-transactions', id: 'generation_all' },

@@ -6,13 +6,30 @@ const withdrawalSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    walletType: {
+        type: String,
+        enum: ['e-wallet', 'product-wallet', 'repurchase-wallet', 'generation-wallet'],
+        default: 'e-wallet'
+    },
     referenceNo: {
         type: String,
         unique: true
     },
+    requestedAmount: {
+        type: Number,
+        default: 0
+    },
     amount: {
         type: Number,
         required: true
+    },
+    tdsAmount: {
+        type: Number,
+        default: 0
+    },
+    processingFee: {
+        type: Number,
+        default: 0
     },
     method: {
         type: String,
@@ -44,6 +61,7 @@ withdrawalSchema.pre('save', async function () {
 });
 
 withdrawalSchema.index({ userId: 1 });
+withdrawalSchema.index({ userId: 1, walletType: 1 });
 withdrawalSchema.index({ status: 1 });
 withdrawalSchema.index({ createdAt: -1 });
 

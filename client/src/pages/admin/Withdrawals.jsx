@@ -202,6 +202,7 @@ const AdminWithdrawals = () => {
                                                 <div>
                                                     <p className="text-sm font-bold text-[#F5E6C8]">{w.userId?.userName || 'Undefined User'}</p>
                                                     <p className="text-[10px] font-black text-[#C8A96A]/40 uppercase tracking-widest mt-1">ID: {w.userId?.memberId || 'N/A'}</p>
+                                                    <p className="text-[10px] font-black text-[#C8A96A]/35 uppercase tracking-widest mt-1">{w.walletType || 'e-wallet'}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -296,20 +297,24 @@ const AdminWithdrawals = () => {
                                     {/* User Block */}
                                     <div className="space-y-4">
                                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#C8A96A]/40 border-l-2 border-[#C8A96A] pl-3">Beneficiary Account</h4>
-                                        <div className="p-5 bg-[#121212] border border-[#C8A96A]/10 rounded-2xl space-y-3">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-xs font-black text-[#F5E6C8]/30 uppercase tracking-widest">Name</span>
-                                                <span className="text-sm font-bold text-[#F5E6C8]">{selectedWithdrawal.userId?.userName}</span>
-                                            </div>
+                                            <div className="p-5 bg-[#121212] border border-[#C8A96A]/10 rounded-2xl space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-black text-[#F5E6C8]/30 uppercase tracking-widest">Name</span>
+                                                    <span className="text-sm font-bold text-[#F5E6C8]">{selectedWithdrawal.userId?.userName}</span>
+                                                </div>
                                             <div className="flex justify-between items-center">
                                                 <span className="text-xs font-black text-[#F5E6C8]/30 uppercase tracking-widest">Member ID</span>
                                                 <span className="text-sm font-mono text-[#C8A96A] font-bold">{selectedWithdrawal.userId?.memberId}</span>
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-xs font-black text-[#F5E6C8]/30 uppercase tracking-widest">Contact</span>
-                                                <span className="text-sm font-bold text-[#F5E6C8]">{selectedWithdrawal.userId?.mobile}</span>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-black text-[#F5E6C8]/30 uppercase tracking-widest">Contact</span>
+                                                    <span className="text-sm font-bold text-[#F5E6C8]">{selectedWithdrawal.userId?.mobile}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-black text-[#F5E6C8]/30 uppercase tracking-widest">Wallet</span>
+                                                    <span className="text-sm font-bold uppercase text-[#C8A96A]">{selectedWithdrawal.walletType || 'e-wallet'}</span>
+                                                </div>
                                             </div>
-                                        </div>
                                     </div>
 
                                     {/* Bank/UPI Block */}

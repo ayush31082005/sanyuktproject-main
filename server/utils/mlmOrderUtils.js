@@ -48,7 +48,7 @@ exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
 
             const income = Number(bv || 0) * generationPercentages[i];
             if (income > 0) {
-                genParent.walletBalance = Number(genParent.walletBalance || 0) + income;
+                genParent.generationWalletBalance = Number(genParent.generationWalletBalance || 0) + income;
                 genParent.totalGenerationIncome =
                     Number(genParent.totalGenerationIncome || 0) + income;
                 await genParent.save();
@@ -60,6 +60,7 @@ exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
                     sourceOrderId: orderId || null,
                     amount: income,
                     type: "Generation",
+                    walletType: "generation-wallet",
                     level: i + 1,
                     description: `Generation income from purchase by ${user.memberId} (Level ${i + 1})`,
                 });

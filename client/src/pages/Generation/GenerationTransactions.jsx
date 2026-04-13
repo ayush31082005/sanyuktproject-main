@@ -26,10 +26,7 @@ const getStoredUserName = () => {
     }
 };
 
-const isGenerationTransaction = (item) => {
-    const combined = [item.type, item.source, item.details].filter(Boolean).join(' ').toLowerCase();
-    return combined.includes('generation') || combined.includes('repurchase');
-};
+const isGenerationTransaction = (item) => String(item?.type || '').toLowerCase() === 'generation';
 
 const GenerationTransactions = () => {
     const [loading, setLoading] = useState(true);
@@ -42,7 +39,9 @@ const GenerationTransactions = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const res = await api.get('/wallet/all-transactions', { params: { search: '' } });
+                const res = await api.get('/wallet/all-transactions', {
+                    params: { search: '', walletType: 'generation-wallet' },
+                });
                 const rows = Array.isArray(res.data?.transactions) ? res.data.transactions : [];
                 setTransactions(rows.filter(isGenerationTransaction));
             } catch (error) {

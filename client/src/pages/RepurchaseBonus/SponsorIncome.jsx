@@ -1,9 +1,33 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import api from '../../api';
+
+const formatDate = (value) => {
+    if (!value) return 'N/A';
+    return new Date(value).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    });
+};
+
+const formatAmount = (value) =>
+    Number(value || 0).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+const inputClassName =
+    'rounded-[2px] border border-[#C8A96A]/20 bg-[#111111] px-3 py-2 text-sm text-[#F5E6C8] outline-none focus:border-[#C8A96A]';
 
 const SponsorIncome = () => {
+    const [loading, setLoading] = useState(true);
     const [searchMode, setSearchMode] = useState('all');
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [searched, setSearched] = useState(false);
+    const [totalIncome, setTotalIncome] = useState(0);
+    const [records, setRecords] = useState([]);
+
     const userName = (() => {
         try {
             const raw = localStorage.getItem('user');
@@ -14,8 +38,39 @@ const SponsorIncome = () => {
         }
     })();
 
-    const inputClassName =
-        'rounded-[2px] border border-[#C8A96A]/20 bg-[#111111] px-3 py-2 text-sm text-[#F5E6C8] outline-none focus:border-[#C8A96A]';
+    const fetchData = async (params = {}) => {
+        try {
+            setLoading(true);
+            const res = await api.get('/repurchase/sponsor-income', { params });
+            const data = res.data?.data || {};
+            setTotalIncome(Number(data.totalAmount || 0));
+            setRecords(Array.isArray(data.records) ? data.records : []);
+        } catch (error) {
+            console.error('Error fetching sponsor income report:', error);
+            setTotalIncome(0);
+            setRecords([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const filteredRecords = useMemo(() => records, [records]);
+
+    const handleSearch = async (event) => {
+        event.preventDefault();
+        setSearched(true);
+
+        if (searchMode === 'between' && fromDate && toDate) {
+            await fetchData({ fromDate, toDate });
+            return;
+        }
+
+        await fetchData();
+    };
 
     return (
         <div className="min-h-screen bg-[#0D0D0D] px-3 py-6 text-white md:px-6">
@@ -36,11 +91,13 @@ const SponsorIncome = () => {
                         <div className="bg-[#1F1F1F] px-4 py-3 text-[11px] font-black uppercase tracking-[0.18em] text-[#C8A96A]">
                             Search Criteria
                         </div>
-                        <form className="p-6 text-[12px] text-[#F5E6C8]/75">
+
+                        <form onSubmit={handleSearch} className="p-6 text-[12px] text-[#F5E6C8]/75">
                             <div className="flex items-center gap-4">
                                 <label className="inline-flex items-center gap-2">
                                     <input
                                         type="radio"
+                                        name="sponsorIncomeSearch"
                                         checked={searchMode === 'all'}
                                         onChange={() => setSearchMode('all')}
                                         accentColor="#C8A96A"
@@ -50,6 +107,7 @@ const SponsorIncome = () => {
                                 <label className="inline-flex items-center gap-2">
                                     <input
                                         type="radio"
+                                        name="sponsorIncomeSearch"
                                         checked={searchMode === 'between'}
                                         onChange={() => setSearchMode('between')}
                                         accentColor="#C8A96A"
@@ -57,13 +115,28 @@ const SponsorIncome = () => {
                                     Between Dates
                                 </label>
                             </div>
+
                             {searchMode === 'between' && (
                                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-                                    <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className={inputClassName} />
-                                    <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className={inputClassName} />
+                                    <input
+                                        type="date"
+                                        value={fromDate}
+                                        onChange={(event) => setFromDate(event.target.value)}
+                                        className={inputClassName}
+                                    />
+                                    <input
+                                        type="date"
+                                        value={toDate}
+                                        onChange={(event) => setToDate(event.target.value)}
+                                        className={inputClassName}
+                                    />
                                 </div>
                             )}
-                            <button className="mt-4 rounded-[2px] bg-[#C8A96A] px-4 py-2 text-[12px] font-black uppercase tracking-[0.12em] text-[#0D0D0D]">
+
+                            <button
+                                type="submit"
+                                className="mt-4 rounded-[2px] bg-[#C8A96A] px-4 py-2 text-[12px] font-black uppercase tracking-[0.12em] text-[#0D0D0D]"
+                            >
                                 Search &gt;&gt;
                             </button>
                         </form>
@@ -72,17 +145,75 @@ const SponsorIncome = () => {
                     <div className="flex min-h-[160px] items-center justify-center rounded-[2px] border border-[#C8A96A]/35 bg-[linear-gradient(135deg,#2d2416_0%,#c8a96a_55%,#f0dfb2_100%)] px-6 py-8 text-center shadow-[0_14px_40px_rgba(0,0,0,0.35)]">
                         <div>
                             <div className="text-[3.4rem] font-light leading-none text-[#0D0D0D]">Rs</div>
-                            <div className="mt-2 text-[3.25rem] font-light leading-none tracking-tight text-[#0D0D0D]">0.00</div>
+                            <div className="mt-2 text-[3.25rem] font-light leading-none tracking-tight text-[#0D0D0D]">
+                                {loading ? '0.00' : formatAmount(totalIncome)}
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div className="mt-10 overflow-hidden rounded-[2px] border border-[#C8A96A]/20 bg-[#171717] shadow-[0_14px_40px_rgba(0,0,0,0.35)]">
                     <div className="flex items-center justify-between bg-[#1F1F1F] px-4 py-3">
-                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#C8A96A]">Sponsor Income Report</span>
-                        <span className="rounded-[2px] bg-[#C8A96A] px-2 py-1 text-[10px] font-bold text-[#0D0D0D]">0 Records</span>
+                        <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#C8A96A]">
+                            Sponsor Income Report
+                        </span>
+                        <span className="rounded-[2px] bg-[#C8A96A] px-2 py-1 text-[10px] font-bold text-[#0D0D0D]">
+                            {filteredRecords.length} Records
+                        </span>
                     </div>
-                    <div className="p-10 text-center text-sm text-[#F5E6C8]/55">No sponsor income records available.</div>
+
+                    <div className="p-4">
+                        {loading ? (
+                            <div className="py-10 text-center text-sm text-[#F5E6C8]/55">Loading report...</div>
+                        ) : filteredRecords.length === 0 ? (
+                            <div className="p-10 text-center text-sm text-[#F5E6C8]/55">
+                                {searched ? 'No sponsor income records found.' : 'No sponsor income records available.'}
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+                                    <thead>
+                                        <tr className="bg-[#111111] text-[#C8A96A]">
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">Transaction ID</th>
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">Date</th>
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">From Member</th>
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">Order ID</th>
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">BV</th>
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">Wallet</th>
+                                            <th className="border border-[#C8A96A]/15 px-3 py-2">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredRecords.map((item) => (
+                                            <tr key={item._id} className="bg-[#171717] text-[#F5E6C8]/90">
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2">
+                                                    #{String(item._id).slice(-8).toUpperCase()}
+                                                </td>
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2">
+                                                    {formatDate(item.createdAt)}
+                                                </td>
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2">
+                                                    {item.sourceUser?.userName || item.sourceUser?.memberId || 'N/A'}
+                                                </td>
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2">
+                                                    #{String(item.sourceOrder?._id || item._id).slice(-8).toUpperCase()}
+                                                </td>
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2">
+                                                    {Number(item.meta?.bv || item.sourceOrder?.bv || 0)}
+                                                </td>
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2 uppercase">
+                                                    {item.walletType || 'N/A'}
+                                                </td>
+                                                <td className="border border-[#C8A96A]/10 px-3 py-2 text-[#C8A96A]">
+                                                    Rs {formatAmount(item.amount)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

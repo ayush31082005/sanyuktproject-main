@@ -5,6 +5,7 @@ const Rank = require("../models/Rank");
 const Repurchase = require("../models/Repurchase");
 const BinaryTree = require("../models/BinaryTree");
 const Order = require("../models/Order");
+const Withdrawal = require("../models/Withdrawal");
 const { processPendingMatchingForAllUsers } = require("../services/matchingService");
 
 exports.calculateDailyMatchingBonus = async () => {
@@ -157,16 +158,72 @@ exports.getMLMStats = async (req, res) => {
         const productPurchases = purchaseAggregate[0]?.totalSales || 0;
         const totalOrders = purchaseAggregate[0]?.orderCount || 0;
 
+        const withdrawalAggregate = await Withdrawal.aggregate([
+            {
+                $match: {
+                    userId: user._id,
+                    status: "Completed",
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalPaidWithdrawals: { $sum: "$amount" },
+                },
+            },
+        ]);
+        const paidWithdrawals = Number(
+            withdrawalAggregate[0]?.totalPaidWithdrawals || 0
+        );
+
+        const legacyIncomeBreakdown = await IncomeHistory.aggregate([
+            {
+                $match: {
+                    userId: user._id,
+                    type: { $in: ["Generation", "Repurchase"] },
+                },
+            },
+            {
+                $group: {
+                    _id: "$type",
+                    totalAmount: { $sum: "$amount" },
+                },
+            },
+        ]);
+
+        const legacyGenerationIncome = Number(
+            legacyIncomeBreakdown.find((row) => row._id === "Generation")?.totalAmount || 0
+        );
+        const legacyRepurchaseIncome = Number(
+            legacyIncomeBreakdown.find((row) => row._id === "Repurchase")?.totalAmount || 0
+        );
+
+        const rawGenerationWalletBalance = Number(user.generationWalletBalance || 0);
+        const rawRepurchaseWalletBalance = Number(user.repurchaseWalletBalance || 0);
+        const totalGenerationIncome = Number(user.totalGenerationIncome || 0);
+        const derivedGenerationWalletBalance =
+            rawGenerationWalletBalance > 0
+                ? rawGenerationWalletBalance
+                : legacyGenerationIncome > 0
+                    ? legacyGenerationIncome
+                    : totalGenerationIncome;
+        const derivedRepurchaseWalletBalance =
+            rawRepurchaseWalletBalance > 0 ? rawRepurchaseWalletBalance : legacyRepurchaseIncome;
+
         const stats = {
             walletBalance: Number(user.walletBalance || 0),
-            generationWalletBalance: Number(user.generationWalletBalance || 0),
+            repurchaseWalletBalance: derivedRepurchaseWalletBalance,
+            generationWalletBalance: derivedGenerationWalletBalance,
             pv: Number(user.pv || 0),
             bv: Number(user.bv || 0),
-            totalGenerationIncome: Number(user.totalGenerationIncome || 0),
+            totalGenerationIncome,
+            legacyGenerationIncome,
+            legacyRepurchaseIncome,
             matchedPV: Number(user.matchedPV || 0),
             rank: user.rank || "Member",
             productPurchases: Number(productPurchases || 0),
             totalOrders: Number(totalOrders || 0),
+            paidWithdrawals,
             dailyPV: {
                 current: Number(user.dailyPV || 0),
                 target: 320,
@@ -243,7 +300,7 @@ exports.handleRepurchase = async (userId, amount, bv) => {
             const incomeAmount = bv * (genRates[generation] || 0.005);
 
             if (incomeAmount > 0) {
-                parent.walletBalance += incomeAmount;
+                parent.generationWalletBalance = Number(parent.generationWalletBalance || 0) + incomeAmount;
                 parent.totalGenerationIncome = Number(parent.totalGenerationIncome || 0) + incomeAmount;
                 await parent.save();
 
@@ -251,6 +308,7 @@ exports.handleRepurchase = async (userId, amount, bv) => {
                     userId: parent._id,
                     amount: incomeAmount,
                     type: "Generation",
+                    walletType: "generation-wallet",
                     fromUserId: user._id,
                     level: generation,
                     description: `Generation ${generation} income from ${user.memberId} repurchase`,
