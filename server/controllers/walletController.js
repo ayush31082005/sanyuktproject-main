@@ -48,6 +48,40 @@ const buildWithdrawalQuery = (userId, walletType = 'e-wallet') => {
     };
 };
 
+const getDeductionWalletQuery = async (userId, walletType = 'e-wallet') => {
+    const normalizedWalletType = normalizeWalletType(walletType || 'e-wallet');
+    const withdrawals = await Withdrawal.find(
+        buildWithdrawalQuery(userId, normalizedWalletType)
+    ).select('_id');
+    const relatedWithdrawalIds = withdrawals.map((item) => item._id);
+
+    const walletScopedConditions = [{ walletType: normalizedWalletType }];
+
+    if (normalizedWalletType === 'e-wallet') {
+        walletScopedConditions.push({ walletType: { $exists: false } });
+        walletScopedConditions.push({ walletType: '' });
+    }
+
+    if (relatedWithdrawalIds.length > 0) {
+        walletScopedConditions.push({
+            $and: [
+                { relatedWithdrawalId: { $in: relatedWithdrawalIds } },
+                {
+                    $or: [
+                        { walletType: { $exists: false } },
+                        { walletType: '' },
+                    ],
+                },
+            ],
+        });
+    }
+
+    return {
+        userId,
+        $or: walletScopedConditions,
+    };
+};
+
 exports.getAllWithdrawals = async (req, res) => {
     try {
         const { status, method, search, walletType = 'All' } = req.query;
@@ -89,7 +123,8 @@ exports.getAllWithdrawals = async (req, res) => {
 exports.getDeductionReport = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { period = 'thisMonth', type = 'All Types', search = '' } = req.query;
+        const { period = 'thisMonth', type = 'All Types', search = '', walletType = 'e-wallet' } = req.query;
+        const normalizedWalletType = normalizeWalletType(walletType || 'e-wallet');
 
         // Date filter
         let dateFilter = {};
@@ -129,7 +164,7 @@ exports.getDeductionReport = async (req, res) => {
         }
 
         const query = {
-            userId,
+            ...(await getDeductionWalletQuery(userId, normalizedWalletType)),
             ...dateFilter,
             ...typeFilter,
             ...searchFilter
@@ -138,7 +173,9 @@ exports.getDeductionReport = async (req, res) => {
         const deductions = await Deduction.find(query).sort({ createdAt: -1 });
 
         // Summary stats
-        const allDeductions = await Deduction.find({ userId });
+        const allDeductions = await Deduction.find(
+            await getDeductionWalletQuery(userId, normalizedWalletType)
+        );
         const totalDeductions = allDeductions.reduce((sum, d) => sum + d.amount, 0);
         const taxDeductions = allDeductions
             .filter(d => d.type === 'Tax')
@@ -155,6 +192,7 @@ exports.getDeductionReport = async (req, res) => {
 
         res.json({
             success: true,
+            walletType: normalizedWalletType,
             summary: {
                 totalDeductions,
                 taxDeductions,
@@ -316,6 +354,7 @@ exports.requestWithdrawal = async (req, res) => {
             // Create TDS deduction record
             await Deduction.create({
                 userId,
+                walletType: normalizedWalletType,
                 type: 'Tax',
                 amount: tdsAmount,
                 description: 'Tax Deducted at Source (TDS)',
@@ -326,6 +365,7 @@ exports.requestWithdrawal = async (req, res) => {
             // Create processing fee record
             await Deduction.create({
                 userId,
+                walletType: normalizedWalletType,
                 type: 'Fee',
                 amount: processingFee,
                 description: 'Processing Fee - Withdrawal',

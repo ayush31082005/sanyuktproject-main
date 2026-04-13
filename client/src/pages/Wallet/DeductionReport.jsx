@@ -28,7 +28,12 @@ const DeductionReport = () => {
         const fetchData = async () => {
             try {
                 const res = await api.get('/wallet/deduction-report', {
-                    params: { period: 'last3Months', type: 'All Types', search: '' },
+                    params: {
+                        walletType: 'e-wallet',
+                        period: 'last3Months',
+                        type: 'All Types',
+                        search: '',
+                    },
                 });
                 setDeductions(Array.isArray(res.data?.deductions) ? res.data.deductions : []);
             } catch (error) {

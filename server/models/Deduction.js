@@ -6,6 +6,11 @@ const deductionSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    walletType: {
+        type: String,
+        enum: ['e-wallet', 'product-wallet', 'repurchase-wallet', 'generation-wallet', ''],
+        default: '',
+    },
     referenceNo: {
         type: String,
         unique: true
@@ -42,6 +47,7 @@ deductionSchema.pre('save', async function () {
 });
 
 deductionSchema.index({ userId: 1 });
+deductionSchema.index({ userId: 1, walletType: 1 });
 deductionSchema.index({ type: 1 });
 deductionSchema.index({ createdAt: -1 });
 
