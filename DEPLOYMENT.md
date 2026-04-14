@@ -11,6 +11,7 @@ This guide provides instructions for deploying the Sanyukt Project with the **Fr
 3.  **Root Directory**: Set this to `server`.
 4.  **Environment**: Node.js.
 5.  **Build Command**: `npm install`
+    This now also builds the Vite frontend automatically and creates `client/dist`.
 6.  **Start Command**: `node server.js` (Ensure `PORT` is dynamic: `process.env.PORT || 5000`)
 7.  **Environment Variables**: Click "Advanced" and add:
     *   `MONGODB_URI`: Your MongoDB connection string.

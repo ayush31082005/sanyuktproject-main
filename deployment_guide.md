@@ -9,6 +9,7 @@ Follow these steps to deploy your application.
 3.  **Root Directory**: Set this to `server`.
 4.  **Runtime**: Node.
 5.  **Build Command**: `npm install`
+    This install step now auto-builds the frontend and generates `client/dist` for production serving.
 6.  **Start Command**: `node server.js`
 7.  **Environment Variables**: Add the following in the Render dashboard:
     - `MONGO_URI`: (Your MongoDB connection string)
