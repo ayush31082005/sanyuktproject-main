@@ -7,6 +7,10 @@ const BinaryTree = require("../models/BinaryTree");
 const Order = require("../models/Order");
 const Withdrawal = require("../models/Withdrawal");
 const { processPendingMatchingForAllUsers } = require("../services/matchingService");
+const {
+    REPURCHASE_INCOME_TYPES,
+    REPURCHASE_WALLET_TYPE,
+} = require("../config/repurchaseBonusConfig");
 
 exports.calculateDailyMatchingBonus = async () => {
     try {
@@ -176,11 +180,20 @@ exports.getMLMStats = async (req, res) => {
             withdrawalAggregate[0]?.totalPaidWithdrawals || 0
         );
 
+        const generationWalletIncomeTypes = Array.from(
+            new Set([
+                "Generation",
+                ...(REPURCHASE_WALLET_TYPE === "generation-wallet"
+                    ? ["Repurchase", ...REPURCHASE_INCOME_TYPES]
+                    : []),
+            ])
+        );
+
         const legacyIncomeBreakdown = await IncomeHistory.aggregate([
             {
                 $match: {
                     userId: user._id,
-                    type: { $in: ["Generation", "Repurchase"] },
+                    type: { $in: generationWalletIncomeTypes },
                 },
             },
             {
@@ -194,6 +207,15 @@ exports.getMLMStats = async (req, res) => {
         const legacyGenerationIncome = Number(
             legacyIncomeBreakdown.find((row) => row._id === "Generation")?.totalAmount || 0
         );
+        const legacyGenerationWalletIncome = Number(
+            legacyIncomeBreakdown.reduce(
+                (sum, row) =>
+                    generationWalletIncomeTypes.includes(row._id)
+                        ? sum + Number(row.totalAmount || 0)
+                        : sum,
+                0
+            ) || 0
+        );
         const legacyRepurchaseIncome = Number(
             legacyIncomeBreakdown.find((row) => row._id === "Repurchase")?.totalAmount || 0
         );
@@ -204,11 +226,10 @@ exports.getMLMStats = async (req, res) => {
         const derivedGenerationWalletBalance =
             rawGenerationWalletBalance > 0
                 ? rawGenerationWalletBalance
-                : legacyGenerationIncome > 0
-                    ? legacyGenerationIncome
+                : legacyGenerationWalletIncome > 0
+                    ? legacyGenerationWalletIncome
                     : totalGenerationIncome;
-        const derivedRepurchaseWalletBalance =
-            rawRepurchaseWalletBalance > 0 ? rawRepurchaseWalletBalance : legacyRepurchaseIncome;
+        const derivedRepurchaseWalletBalance = rawRepurchaseWalletBalance;
 
         const stats = {
             walletBalance: Number(user.walletBalance || 0),

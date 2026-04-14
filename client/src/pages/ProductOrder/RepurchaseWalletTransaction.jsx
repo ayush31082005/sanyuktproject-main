@@ -22,25 +22,6 @@ const formatDate = (value) =>
 
 const formatCurrency = (value) => Number(value || 0).toFixed(2);
 
-const REPURCHASE_INCOME_TYPES = new Set([
-    'repurchase',
-    'self_repurchase',
-    'repurchase_level',
-    'sponsor_income',
-    'royalty_bonus',
-    'house_fund',
-    'leadership_fund',
-    'car_fund',
-    'travel_fund',
-    'bike_fund',
-]);
-
-const isRepurchaseIncomeTransaction = (item) => {
-    const type = String(item?.type || '').toLowerCase();
-    const details = String(item?.details || '').toLowerCase();
-    return REPURCHASE_INCOME_TYPES.has(type) || details.includes('repurchase');
-};
-
 export default function RepurchaseWalletTransaction() {
     const [searchMode, setSearchMode] = useState('all');
     const [fromDate, setFromDate] = useState('');
@@ -53,16 +34,19 @@ export default function RepurchaseWalletTransaction() {
     const loadReport = async (params = {}) => {
         try {
             setLoading(true);
-            const res = await api.get('/wallet/all-transactions', {
-                params: {
-                    search: '',
-                    walletType: 'generation-wallet',
-                    ...params,
-                },
-            });
+            const [statsRes, txRes] = await Promise.all([
+                api.get('/mlm/get-stats'),
+                api.get('/wallet/all-transactions', {
+                    params: {
+                        search: '',
+                        walletType: 'generation-wallet',
+                        ...params,
+                    },
+                }),
+            ]);
 
-            const rows = Array.isArray(res.data?.transactions) ? res.data.transactions : [];
-            const repurchaseRows = rows.filter(isRepurchaseIncomeTransaction).map((item) => ({
+            const rows = Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : [];
+            const normalizedRows = rows.map((item) => ({
                 _id: item._id,
                 createdAt: item.date,
                 txType: item.txType,
@@ -72,13 +56,8 @@ export default function RepurchaseWalletTransaction() {
                 balanceAfter: null,
             }));
 
-            const total = repurchaseRows.reduce(
-                (sum, item) => sum + (item.txType === 'credit' ? Number(item.amount || 0) : -Number(item.amount || 0)),
-                0
-            );
-
-            setBalance(formatCurrency(total));
-            setTransactions(repurchaseRows);
+            setBalance(formatCurrency(statsRes.data?.generationWalletBalance));
+            setTransactions(normalizedRows);
         } catch (error) {
             console.error('Repurchase wallet transaction error:', error);
             setTransactions([]);
@@ -157,7 +136,7 @@ export default function RepurchaseWalletTransaction() {
                     <div className="rounded-[2rem] border border-emerald-400/20 bg-[linear-gradient(135deg,#1f8f53_0%,#34c97a_48%,#5bd48f_100%)] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.28)]">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Repurchase Income Total</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Generation Wallet Total</p>
                                 <div className="mt-6 text-5xl font-black tracking-tight text-white">{balance}</div>
                             </div>
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
@@ -184,7 +163,7 @@ export default function RepurchaseWalletTransaction() {
                         ) : transactions.length === 0 ? (
                             <div className="flex min-h-[180px] items-center justify-center rounded-[1.5rem] border border-dashed border-[#C8A96A]/14 bg-[#121212] px-6 text-center">
                                 <p className="text-sm text-[#F5E6C8]/50">
-                                    {searched ? 'No repurchase wallet transactions found for the selected criteria.' : 'Use search criteria to view transaction report.'}
+                                    {searched ? 'No generation wallet transactions found for the selected criteria.' : 'Use search criteria to view transaction report.'}
                                 </p>
                             </div>
                         ) : (

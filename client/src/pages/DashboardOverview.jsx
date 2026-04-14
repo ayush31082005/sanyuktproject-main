@@ -189,20 +189,17 @@ const DashboardOverview = () => {
         const availableRightPV = firstNumber(matchingReport?.availableRightPV);
         const totalLeftPV = firstNumber(matchingReport?.totalLeftPV, stats?.leftPV);
         const totalRightPV = firstNumber(matchingReport?.totalRightPV, stats?.rightPV);
+        const mirroredGenerationWallet = firstNumber(
+            stats?.generationWalletBalance,
+            userData?.generationWalletBalance,
+            stats?.legacyGenerationIncome,
+            stats?.totalGenerationIncome
+        );
 
         return {
-            repurchaseWallet: firstNumber(
-                stats?.repurchaseWalletBalance,
-                userData?.repurchaseWalletBalance,
-                stats?.legacyRepurchaseIncome
-            ),
+            repurchaseWallet: mirroredGenerationWallet,
             eWallet: firstNumber(stats?.walletBalance, userData?.walletBalance),
-            generationWallet: firstNumber(
-                stats?.generationWalletBalance,
-                userData?.generationWalletBalance,
-                stats?.legacyGenerationIncome,
-                stats?.totalGenerationIncome
-            ),
+            generationWallet: mirroredGenerationWallet,
             productWallet: firstNumber(userData?.productWalletBalance),
             netCommission: firstNumber(stats?.totalGenerationIncome),
             paidWithdrawals: firstNumber(stats?.paidWithdrawals, userData?.paidWithdrawals),

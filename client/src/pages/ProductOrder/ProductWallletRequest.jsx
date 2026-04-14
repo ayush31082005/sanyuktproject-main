@@ -156,14 +156,14 @@ export default function ProductWalletRequest() {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className={fieldLabelClass}>Bank Name</label>
-                                <select name="bankName" value={formData.bankName} onChange={handleChange} className={fieldClass}>
-                                    <option value="">--Select Bank--</option>
-                                    <option value="SBI">SBI</option>
-                                    <option value="HDFC">HDFC</option>
-                                    <option value="ICICI">ICICI</option>
-                                    <option value="PNB">PNB</option>
-                                    <option value="Axis Bank">Axis Bank</option>
-                                </select>
+                                <input
+                                    type="text"
+                                    name="bankName"
+                                    value={formData.bankName}
+                                    onChange={handleChange}
+                                    placeholder="Enter bank name"
+                                    className={fieldClass}
+                                />
                             </div>
 
                             <div>

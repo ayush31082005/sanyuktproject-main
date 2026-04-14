@@ -1,6 +1,10 @@
 const User = require("../models/User");
 const IncomeHistory = require("../models/IncomeHistory");
 const WalletLedger = require("../models/WalletLedger");
+const {
+    REPURCHASE_INCOME_TYPES,
+    REPURCHASE_WALLET_TYPE,
+} = require("../config/repurchaseBonusConfig");
 
 const WALLET_FIELDS = {
     "e-wallet": "walletBalance",
@@ -41,8 +45,14 @@ const resolveWalletField = (walletType) => {
 
 const deriveLegacyIncomeBalance = async (userId, walletType) => {
     const legacyIncomeTypeMap = {
-        "generation-wallet": ["Generation"],
-        "repurchase-wallet": ["Repurchase"],
+        "generation-wallet": Array.from(
+            new Set([
+                "Generation",
+                ...(REPURCHASE_WALLET_TYPE === "generation-wallet"
+                    ? ["Repurchase", ...REPURCHASE_INCOME_TYPES]
+                    : []),
+            ])
+        ),
     };
 
     const legacyTypes = legacyIncomeTypeMap[walletType] || [];
@@ -79,11 +89,7 @@ const resolveCurrentWalletBalance = async (userId, walletType, user) => {
     const { walletField, normalizedWalletType } = resolveWalletField(walletType);
     const rawBalance = Number(user?.[walletField] || 0);
 
-    if (
-        rawBalance <= 0 &&
-        (normalizedWalletType === "generation-wallet" ||
-            normalizedWalletType === "repurchase-wallet")
-    ) {
+    if (rawBalance <= 0 && normalizedWalletType === "generation-wallet") {
         const legacyBalance = await deriveLegacyIncomeBalance(
             userId,
             normalizedWalletType

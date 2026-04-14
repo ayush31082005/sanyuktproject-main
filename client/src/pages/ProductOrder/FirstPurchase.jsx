@@ -32,7 +32,7 @@ export default function PlaceOrderPage() {
     const [productsList, setProductsList] = useState([]);
     const [productsLoading, setProductsLoading] = useState(true);
     const [directSellerId, setDirectSellerId] = useState('');
-    const [name] = useState(storedUser?.memberId || storedUser?.userName || '');
+    const [name, setName] = useState('');
     const [selectedProduct, setSelectedProduct] = useState('');
     const [quantity, setQuantity] = useState(1);
     const [cart, setCart] = useState([]);
@@ -116,6 +116,7 @@ export default function PlaceOrderPage() {
             setOrderTo('');
             setAccountPassword('');
             setDirectSellerId('');
+            setName('');
             setFeedback({
                 type: 'success',
                 message: data?.message || 'First purchase order place ho gaya.',
@@ -167,7 +168,13 @@ export default function PlaceOrderPage() {
 
                         <div>
                             <label className={fieldLabelClass}>Name</label>
-                            <input type="text" value={name} readOnly className={`${fieldClass} bg-[#151515] text-white`} />
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Enter name"
+                                className={fieldClass}
+                            />
                         </div>
 
                         <div>
