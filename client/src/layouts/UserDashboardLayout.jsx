@@ -249,17 +249,19 @@ const UserDashboardLayout = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#0d0d0d] text-[#f5e6c8]">
+        <div className="min-h-screen overflow-x-hidden bg-[#0d0d0d] text-[#f5e6c8]">
             <div className="sticky top-0 z-40 h-[6px] bg-[#c07a1b]" />
 
             <div className="flex min-h-[calc(100vh-6px)]">
             <aside
                 className={`fixed left-0 top-[94px] md:top-[121px] z-50 h-[calc(100vh-94px)] md:h-[calc(100vh-121px)] overflow-y-auto border-r border-[#c8a96a]/14 bg-[linear-gradient(180deg,#121212_0%,#0d0d0d_48%,#111111_100%)] text-[#f5e6c8] transition-all duration-300
-                    ${sidebarOpen ? 'w-[214px]' : 'w-0 overflow-hidden md:w-[82px]'}`}
+                    ${isMobile
+                        ? `w-[min(86vw,320px)] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+                        : sidebarOpen ? 'w-[214px]' : 'w-[82px]'}`}
             >
-                <div className={`${sidebarOpen ? 'px-0 py-0' : 'px-0 py-3'}`}>
-                    <div className={`border-b border-[#c8a96a]/12 ${sidebarOpen ? 'px-4 py-4' : 'px-0 py-4'} ${sidebarOpen ? '' : 'flex justify-center'}`}>
-                        {sidebarOpen ? (
+                <div className={`${sidebarOpen || isMobile ? 'px-0 py-0' : 'px-0 py-3'}`}>
+                    <div className={`border-b border-[#c8a96a]/12 ${sidebarOpen || isMobile ? 'px-4 py-4' : 'px-0 py-4'} ${sidebarOpen || isMobile ? '' : 'flex justify-center'}`}>
+                        {sidebarOpen || isMobile ? (
                             <div className="flex items-center gap-3">
                                 <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-[#c8a96a]/30 bg-black shadow-lg">
                                     <img
@@ -312,7 +314,7 @@ const UserDashboardLayout = () => {
                                 <div key={item.id} className="px-2 py-0.5">
                                     <button
                                         onClick={() => {
-                                            if (hasChildren && sidebarOpen) {
+                                            if (hasChildren && (sidebarOpen || isMobile)) {
                                                 setOpenDropdown((prev) => (prev === item.id ? null : item.id));
                                                 return;
                                             }
@@ -321,15 +323,15 @@ const UserDashboardLayout = () => {
                                             if (isMobile) setSidebarOpen(false);
                                         }}
                                         className={`group relative flex w-full items-center rounded-md border text-left transition-all duration-200
-                                            ${sidebarOpen ? 'min-h-[28px] px-2.5 py-1.5' : 'mx-auto min-h-[34px] w-[56px] justify-center px-0'}
+                                            ${sidebarOpen || isMobile ? 'min-h-[28px] px-2.5 py-1.5' : 'mx-auto min-h-[34px] w-[56px] justify-center px-0'}
                                             ${isActive
                                                 ? 'border-[#c8a96a]/28 bg-[#1b1b1b] text-[#f5e6c8] shadow-[inset_3px_0_0_#c8a96a]'
                                                 : 'border-transparent bg-transparent text-[#f5e6c8]/92 hover:border-[#c8a96a]/18 hover:bg-[#181818]'
                                             }`}
                                     >
-                                        <Icon className={`${sidebarOpen ? 'mr-2 h-3.5 w-3.5' : 'h-4 w-4'} shrink-0`} strokeWidth={2.2} />
+                                        <Icon className={`${sidebarOpen || isMobile ? 'mr-2 h-3.5 w-3.5' : 'h-4 w-4'} shrink-0`} strokeWidth={2.2} />
 
-                                        {sidebarOpen && (
+                                        {(sidebarOpen || isMobile) && (
                                             <>
                                                 <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">
                                                     {item.name}
@@ -359,14 +361,14 @@ const UserDashboardLayout = () => {
                                             </>
                                         )}
 
-                                        {!sidebarOpen && (
+                                        {!sidebarOpen && !isMobile && (
                                             <div className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 whitespace-nowrap rounded bg-[#181818] px-2 py-1 text-[10px] font-bold text-[#f5e6c8] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                                                 {item.name}
                                             </div>
                                         )}
                                     </button>
 
-                                    {hasChildren && sidebarOpen && openDropdown === item.id && (
+                                    {hasChildren && (sidebarOpen || isMobile) && openDropdown === item.id && (
                                         <div className="mt-1 overflow-hidden rounded-md border border-[#c8a96a]/14 bg-[#141414] py-1">
                                             {item.children.map((child) => {
                                                 const isChildActiveRoute = location.pathname === child.path;
@@ -395,10 +397,10 @@ const UserDashboardLayout = () => {
                             <button
                                 onClick={handleLogout}
                                 className={`group flex w-full items-center rounded-md border border-transparent text-[#f5e6c8] transition-colors hover:bg-[#181818]
-                                    ${sidebarOpen ? 'px-3 py-2 text-left' : 'mx-auto w-[56px] justify-center px-0 py-2'}`}
+                                    ${sidebarOpen || isMobile ? 'px-3 py-2 text-left' : 'mx-auto w-[56px] justify-center px-0 py-2'}`}
                             >
-                                <LogOut className={`${sidebarOpen ? 'mr-3 h-4 w-4' : 'h-4 w-4'}`} strokeWidth={2.2} />
-                                {sidebarOpen && <span className="text-[12px] font-semibold">Logout</span>}
+                                <LogOut className={`${sidebarOpen || isMobile ? 'mr-3 h-4 w-4' : 'h-4 w-4'}`} strokeWidth={2.2} />
+                                {(sidebarOpen || isMobile) && <span className="text-[12px] font-semibold">Logout</span>}
                             </button>
                         </div>
                     </nav>
@@ -409,8 +411,8 @@ const UserDashboardLayout = () => {
                 className={`min-h-[calc(100vh-94px)] flex-1 transition-all duration-300 md:min-h-[calc(100vh-121px)]
                     ${sidebarOpen ? 'md:ml-[214px]' : 'md:ml-[82px]'}`}
             >
-                <div className="sticky top-[94px] z-30 md:top-[121px]">
-                    <div className="flex items-center justify-between border-b border-[#c8a96a]/12 bg-[#111111] px-4 py-3 md:px-8">
+                <div className="relative z-30">
+                    <div className="flex flex-col gap-3 border-b border-[#c8a96a]/12 bg-[#111111] px-4 py-3 md:flex-row md:items-center md:justify-between md:px-8">
                         <div className="flex items-center gap-3">
                             {isMobile && (
                                 <button
@@ -421,13 +423,13 @@ const UserDashboardLayout = () => {
                                 </button>
                             )}
                             <div>
-                                <div className="text-[22px] font-black text-[#f5e6c8]">
+                                <div className="text-[18px] font-black text-[#f5e6c8] md:text-[22px]">
                                     {pageTitle}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-left md:text-right">
                             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c8a96a]/65">
                                 Welcome
                             </div>
@@ -438,7 +440,7 @@ const UserDashboardLayout = () => {
                     </div>
                 </div>
 
-                <div className="bg-[#0d0d0d] px-3 py-4 md:px-6 md:py-6">
+                <div className="bg-[#0d0d0d] px-2 py-3 sm:px-3 md:px-6 md:py-6">
                     <Outlet />
                 </div>
             </main>

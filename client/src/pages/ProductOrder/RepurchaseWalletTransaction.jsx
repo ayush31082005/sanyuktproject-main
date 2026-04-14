@@ -3,15 +3,15 @@ import { CalendarDays, CircleDollarSign, Search, ShieldCheck } from 'lucide-reac
 import api from '../../api';
 
 const sectionTitleClass = 'text-[13px] font-black uppercase tracking-[0.14em] text-[#C8A96A]';
-const fieldClass = 'w-full rounded-2xl border border-[#C8A96A]/15 bg-[#111111] px-4 py-3 text-sm text-[#F5E6C8] outline-none transition placeholder:text-[#F5E6C8]/30 focus:border-[#C8A96A]/50 focus:bg-[#141414]';
+const fieldClass = 'w-full min-w-0 rounded-2xl border border-[#C8A96A]/15 bg-[#111111] px-4 py-3 text-sm text-[#F5E6C8] outline-none transition placeholder:text-[#F5E6C8]/30 focus:border-[#C8A96A]/50 focus:bg-[#141414]';
 
 const SectionCard = ({ title, children, badge = null }) => (
-    <div className="overflow-hidden rounded-[2rem] border border-[#C8A96A]/12 bg-[#1A1A1A] shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
-        <div className="flex flex-col gap-3 border-b border-white/5 bg-[linear-gradient(135deg,#1f1f1f_0%,#191919_50%,#151515_100%)] px-5 py-4 md:flex-row md:items-center md:justify-between">
-            <div className={sectionTitleClass}>{title}</div>
+    <div className="max-w-full overflow-hidden rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#1A1A1A] shadow-[0_20px_50px_rgba(0,0,0,0.35)] md:rounded-[2rem]">
+        <div className="flex flex-col gap-3 border-b border-white/5 bg-[linear-gradient(135deg,#1f1f1f_0%,#191919_50%,#151515_100%)] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
+            <div className={`${sectionTitleClass} min-w-0 break-words`}>{title}</div>
             {badge}
         </div>
-        <div className="p-5 md:p-6">{children}</div>
+        <div className="p-4 md:p-6">{children}</div>
     </div>
 );
 
@@ -66,24 +66,26 @@ export default function RepurchaseWalletTransaction() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0D0D0D] px-4 py-6 md:px-6">
+        <div className="min-h-screen overflow-x-hidden bg-[#0D0D0D] px-2 py-4 sm:px-4 sm:py-6 md:px-6">
             <div className="mx-auto max-w-[1280px]">
                 <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
+                    <div className="min-w-0">
                         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#C8A96A]">Transaction Section</p>
-                        <h1 className="mt-1 text-[1.9rem] font-black tracking-tight text-white">Repurchase Wallet Transaction Report</h1>
+                        <h1 className="mt-1 break-words text-[1.8rem] font-black leading-tight tracking-tight text-white sm:text-[1.9rem]">
+                            Repurchase Wallet Transaction Report
+                        </h1>
                     </div>
 
                     <div className="text-left md:text-right">
                         <div className="text-[12px] font-black uppercase tracking-[0.16em] text-[#F5E6C8]/45">Welcome Back</div>
-                        <div className="mt-1 text-lg font-black text-[#F5E6C8]">Repurchase Wallet Desk</div>
+                        <div className="mt-1 break-words text-base font-black text-[#F5E6C8] sm:text-lg">Repurchase Wallet Desk</div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
                     <SectionCard title="Search Criteria">
                         <form onSubmit={handleSearch} className="space-y-5">
-                            <div className="flex flex-wrap items-center gap-5">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
                                 <label className="inline-flex items-center gap-2 text-sm font-semibold text-[#F5E6C8]">
                                     <input type="radio" name="searchMode" checked={searchMode === 'all'} onChange={() => setSearchMode('all')} className="h-4 w-4 accent-[#C8A96A]" />
                                     All Record
@@ -109,20 +111,22 @@ export default function RepurchaseWalletTransaction() {
                                 </div>
                             )}
 
-                            <button type="submit" className="inline-flex items-center gap-2 rounded-2xl bg-[#C8A96A] px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d]">
+                            <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C8A96A] px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] sm:w-auto">
                                 <Search size={16} />
                                 Search
                             </button>
                         </form>
                     </SectionCard>
 
-                    <div className="rounded-[2rem] border border-emerald-400/20 bg-[linear-gradient(135deg,#1f8f53_0%,#34c97a_48%,#5bd48f_100%)] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.28)]">
+                    <div className="rounded-[1.5rem] border border-emerald-400/20 bg-[linear-gradient(135deg,#1f8f53_0%,#34c97a_48%,#5bd48f_100%)] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.28)] md:rounded-[2rem] md:p-6">
                         <div className="flex items-start justify-between gap-4">
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Repurchase Wallet Total</p>
-                                <div className="mt-6 text-5xl font-black tracking-tight text-white">{balance}</div>
+                                <div className="mt-4 break-all text-[2.2rem] font-black leading-none tracking-tight text-white sm:mt-6 sm:text-5xl">
+                                    {balance}
+                                </div>
                             </div>
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white sm:h-12 sm:w-12">
                                 <CircleDollarSign size={22} />
                             </div>
                         </div>
@@ -150,36 +154,88 @@ export default function RepurchaseWalletTransaction() {
                                 </p>
                             </div>
                         ) : (
-                            <div className="overflow-hidden rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#111111]">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[860px] border-collapse text-left text-sm text-[#F5E6C8]">
-                                        <thead>
-                                            <tr className="border-b border-white/5 bg-[#171717] text-[11px] uppercase tracking-[0.12em] text-[#C8A96A]">
-                                                <th className="px-4 py-3">Date</th>
-                                                <th className="px-4 py-3">Type</th>
-                                                <th className="px-4 py-3">Source</th>
-                                                <th className="px-4 py-3">Details</th>
-                                                <th className="px-4 py-3">Amount</th>
-                                                <th className="px-4 py-3">Balance After</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {transactions.map((item) => (
-                                                <tr key={item._id} className="border-b border-white/5 last:border-b-0">
-                                                    <td className="px-4 py-4">{formatDate(item.createdAt)}</td>
-                                                    <td className="px-4 py-4 uppercase">{item.txType}</td>
-                                                    <td className="px-4 py-4">{item.sourceType}</td>
-                                                    <td className="px-4 py-4">{item.description || '-'}</td>
-                                                    <td className={`px-4 py-4 font-semibold ${item.txType === 'credit' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            <>
+                                <div className="space-y-3 md:hidden">
+                                    {transactions.map((item, index) => (
+                                        <div
+                                            key={item._id}
+                                            className="rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#111111] p-4 shadow-[0_14px_30px_rgba(0,0,0,0.22)]"
+                                        >
+                                            <div className="mb-3 flex items-start justify-between gap-3">
+                                                <div>
+                                                    <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#C8A96A]/70">
+                                                        Record {index + 1}
+                                                    </div>
+                                                    <div className="mt-1 text-sm font-black text-white">
+                                                        {formatDate(item.createdAt)}
+                                                    </div>
+                                                </div>
+                                                <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${item.txType === 'credit' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : 'border border-rose-500/20 bg-rose-500/10 text-rose-300'}`}>
+                                                    {item.txType}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-2.5 text-sm">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <span className="text-[#F5E6C8]/55">Source</span>
+                                                    <span className="max-w-[62%] break-words text-right font-semibold text-[#F5E6C8]">
+                                                        {item.sourceType}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <span className="text-[#F5E6C8]/55">Details</span>
+                                                    <span className="max-w-[62%] break-words text-right font-semibold text-[#F5E6C8]">
+                                                        {item.description || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <span className="text-[#F5E6C8]/55">Amount</span>
+                                                    <span className={`text-right font-black ${item.txType === 'credit' ? 'text-emerald-300' : 'text-rose-300'}`}>
                                                         {item.txType === 'credit' ? '+' : '-'}Rs {formatCurrency(item.amount)}
-                                                    </td>
-                                                    <td className="px-4 py-4">{item.balanceAfter == null ? '-' : `Rs ${formatCurrency(item.balanceAfter)}`}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <span className="text-[#F5E6C8]/55">Balance After</span>
+                                                    <span className="text-right font-semibold text-[#F5E6C8]">
+                                                        {item.balanceAfter == null ? '-' : `Rs ${formatCurrency(item.balanceAfter)}`}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            </div>
+
+                                <div className="hidden overflow-hidden rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#111111] md:block">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full min-w-[860px] border-collapse text-left text-sm text-[#F5E6C8]">
+                                            <thead>
+                                                <tr className="border-b border-white/5 bg-[#171717] text-[11px] uppercase tracking-[0.12em] text-[#C8A96A]">
+                                                    <th className="px-4 py-3">Date</th>
+                                                    <th className="px-4 py-3">Type</th>
+                                                    <th className="px-4 py-3">Source</th>
+                                                    <th className="px-4 py-3">Details</th>
+                                                    <th className="px-4 py-3">Amount</th>
+                                                    <th className="px-4 py-3">Balance After</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {transactions.map((item) => (
+                                                    <tr key={item._id} className="border-b border-white/5 last:border-b-0">
+                                                        <td className="px-4 py-4">{formatDate(item.createdAt)}</td>
+                                                        <td className="px-4 py-4 uppercase">{item.txType}</td>
+                                                        <td className="px-4 py-4">{item.sourceType}</td>
+                                                        <td className="px-4 py-4">{item.description || '-'}</td>
+                                                        <td className={`px-4 py-4 font-semibold ${item.txType === 'credit' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                                                            {item.txType === 'credit' ? '+' : '-'}Rs {formatCurrency(item.amount)}
+                                                        </td>
+                                                        <td className="px-4 py-4">{item.balanceAfter == null ? '-' : `Rs ${formatCurrency(item.balanceAfter)}`}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </SectionCard>
                 </div>

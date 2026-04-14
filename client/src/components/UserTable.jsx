@@ -77,48 +77,88 @@ const UserTable = ({ title, type, endpoint }) => {
     const currentData = filteredData.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     return (
-        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-50 overflow-hidden flex flex-col h-full">
+        <div className="rounded-[2rem] border border-[#c8a96a]/14 bg-[#1a1a1a] p-4 shadow-[0_18px_40px_rgba(0,0,0,0.28)] overflow-hidden flex flex-col h-full sm:p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <div>
-                    <h2 className="text-[14px] font-black text-slate-900 uppercase tracking-[0.15em] mb-1">{title}</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Records: {filteredData.length}</p>
+                    <h2 className="text-[14px] font-black text-[#f5e6c8] uppercase tracking-[0.15em] mb-1">{title}</h2>
+                    <p className="text-[10px] font-bold text-[#c8a96a]/65 uppercase tracking-widest">Total Records: {filteredData.length}</p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c8a96a]/55" size={16} />
                         <input
                             type="text"
                             placeholder="Search records..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full md:w-64"
+                            className="w-full rounded-xl border border-[#c8a96a]/14 bg-[#111111] pl-10 pr-4 py-2 text-sm text-[#f5e6c8] placeholder:text-[#f5e6c8]/30 focus:outline-none focus:ring-2 focus:ring-[#c8a96a]/20 md:w-64"
                         />
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-x-auto min-h-[400px]">
+            <div className="space-y-3 md:hidden">
+                {loading ? (
+                    <div className="flex min-h-[220px] items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#c8a96a]"></div>
+                    </div>
+                ) : currentData.length === 0 ? (
+                    <div className="min-h-[220px] rounded-2xl border border-dashed border-[#c8a96a]/14 px-4 py-12 text-center text-[#f5e6c8]/55 font-bold uppercase text-[12px] tracking-widest">
+                        No records found
+                    </div>
+                ) : (
+                    currentData.map((item, idx) => (
+                        <div key={item.userId || idx} className="rounded-2xl border border-[#c8a96a]/12 bg-[#151515] p-4 shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                                <div className="text-[11px] font-black uppercase tracking-widest text-[#c8a96a]/65">
+                                    Record {(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
+                                </div>
+                                <button className="rounded-lg p-2 text-[#c8a96a]/60 transition-colors hover:bg-[#1d1d1d]" title={item.position ? `Position: ${item.position}` : 'View'}>
+                                    <FileText size={16} />
+                                </button>
+                            </div>
+                            {type === 'income' ? (
+                                <div className="space-y-2 text-[12px]">
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Date</span><span className="text-right font-bold text-[#f5e6c8]">{item.date ? new Date(item.date).toLocaleDateString() : '-'}</span></div>
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Type</span><span className="rounded bg-[#c8a96a]/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-[#c8a96a]">{item.type}</span></div>
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Amount</span><span className="text-right font-black text-[#f5e6c8]">Rs {Number(item.amount || 0).toFixed(2)}</span></div>
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Source</span><span className="text-right font-bold text-[#f5e6c8]">{item.fromUserId?.userName || 'System'}</span></div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 text-[12px]">
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Member ID</span><span className="text-right font-black text-[#f5e6c8]">{item.memberId}</span></div>
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Name</span><span className="text-right font-bold text-[#f5e6c8]">{item.userName}</span></div>
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Rank</span><span className="text-right font-bold text-[#f5e6c8]">{item.rank}</span></div>
+                                    <div className="flex justify-between gap-3"><span className="font-bold text-[#f5e6c8]/60">Status</span><span className={`text-right text-[10px] font-black uppercase tracking-widest ${item.activeStatus ? 'text-[#c8a96a]' : 'text-[#f5e6c8]/45'}`}>{item.activeStatus ? 'Active' : 'Inactive'}</span></div>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            <div className="hidden md:block flex-1 overflow-x-auto min-h-[400px]">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="border-b border-slate-50">
-                            <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">#</th>
+                        <tr className="border-b border-[#c8a96a]/10">
+                            <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">#</th>
                             {type === 'income' ? (
                                 <>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Source</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Date</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Type</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Amount</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Source</th>
                                 </>
                             ) : (
                                 <>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Member ID</th>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Name</th>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rank</th>
-                                    <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Member ID</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Name</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Rank</th>
+                                    <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Status</th>
                                 </>
                             )}
-                            <th className="pb-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Details</th>
+                            <th className="pb-4 px-4 text-[10px] font-black text-[#c8a96a]/65 uppercase tracking-widest">Details</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -130,32 +170,32 @@ const UserTable = ({ title, type, endpoint }) => {
                             </tr>
                         ) : currentData.length === 0 ? (
                             <tr>
-                                <td colSpan="6" className="py-20 text-center text-slate-400 font-bold uppercase text-[12px] tracking-widest">
+                                <td colSpan="6" className="py-20 text-center text-[#f5e6c8]/55 font-bold uppercase text-[12px] tracking-widest">
                                     No records found
                                 </td>
                             </tr>
                         ) : (
                             currentData.map((item, idx) => (
-                                <tr key={item.userId || idx} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                    <td className="py-4 px-4 text-[12px] font-bold text-slate-500">{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
+                                <tr key={item.userId || idx} className="border-b border-[#c8a96a]/8 transition-colors hover:bg-[#161616]">
+                                    <td className="py-4 px-4 text-[12px] font-bold text-[#f5e6c8]/55">{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
                                     {type === 'income' ? (
                                         <>
-                                            <td className="py-4 px-4 text-[12px] font-bold text-slate-900">{item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+                                            <td className="py-4 px-4 text-[12px] font-bold text-[#f5e6c8]">{item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
                                             <td className="py-4 px-4">
-                                                <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[10px] font-black uppercase tracking-widest">{item.type}</span>
+                                                <span className="rounded bg-[#c8a96a]/10 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-[#c8a96a]">{item.type}</span>
                                             </td>
-                                            <td className="py-4 px-4 text-[12px] font-black text-slate-900">Rs {Number(item.amount || 0).toFixed(2)}</td>
-                                            <td className="py-4 px-4 text-[12px] font-bold text-slate-500">{item.fromUserId?.userName || 'System'}</td>
+                                            <td className="py-4 px-4 text-[12px] font-black text-[#f5e6c8]">Rs {Number(item.amount || 0).toFixed(2)}</td>
+                                            <td className="py-4 px-4 text-[12px] font-bold text-[#f5e6c8]/65">{item.fromUserId?.userName || 'System'}</td>
                                         </>
                                     ) : (
                                         <>
-                                            <td className="py-4 px-4 text-[12px] font-black text-slate-900">{item.memberId}</td>
-                                            <td className="py-4 px-4 text-[12px] font-bold text-slate-900">{item.userName}</td>
-                                            <td className="py-4 px-4 text-[12px] font-bold text-slate-500">{item.rank}</td>
+                                            <td className="py-4 px-4 text-[12px] font-black text-[#f5e6c8]">{item.memberId}</td>
+                                            <td className="py-4 px-4 text-[12px] font-bold text-[#f5e6c8]">{item.userName}</td>
+                                            <td className="py-4 px-4 text-[12px] font-bold text-[#f5e6c8]/65">{item.rank}</td>
                                             <td className="py-4 px-4">
                                                 <div className="flex items-center gap-1.5">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${item.activeStatus ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${item.activeStatus ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                    <div className={`h-1.5 w-1.5 rounded-full ${item.activeStatus ? 'bg-[#c8a96a]' : 'bg-[#f5e6c8]/30'}`}></div>
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${item.activeStatus ? 'text-[#c8a96a]' : 'text-[#f5e6c8]/45'}`}>
                                                         {item.activeStatus ? 'Active' : 'Inactive'}
                                                     </span>
                                                 </div>
@@ -163,7 +203,7 @@ const UserTable = ({ title, type, endpoint }) => {
                                         </>
                                     )}
                                     <td className="py-4 px-4">
-                                        <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors" title={item.position ? `Position: ${item.position}` : 'View'}>
+                                        <button className="rounded-lg p-2 text-[#c8a96a]/60 transition-colors hover:bg-[#1d1d1d]" title={item.position ? `Position: ${item.position}` : 'View'}>
                                             <FileText size={16} />
                                         </button>
                                     </td>
@@ -176,21 +216,21 @@ const UserTable = ({ title, type, endpoint }) => {
 
             {totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <p className="text-[10px] font-bold text-[#c8a96a]/65 uppercase tracking-widest">
                         Page {currentPage} of {totalPages}
                     </p>
                     <div className="flex gap-2">
                         <button
                             disabled={currentPage === 1}
                             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                            className="p-2 border border-slate-100 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-all"
+                            className="rounded-lg border border-[#c8a96a]/14 p-2 text-[#f5e6c8] transition-all hover:bg-[#161616] disabled:opacity-50"
                         >
                             <ChevronLeft size={16} />
                         </button>
                         <button
                             disabled={currentPage === totalPages}
                             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                            className="p-2 border border-slate-100 rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-all"
+                            className="rounded-lg border border-[#c8a96a]/14 p-2 text-[#f5e6c8] transition-all hover:bg-[#161616] disabled:opacity-50"
                         >
                             <ChevronRight size={16} />
                         </button>

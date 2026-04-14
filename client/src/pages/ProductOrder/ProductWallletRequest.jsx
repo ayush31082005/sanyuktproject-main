@@ -4,20 +4,20 @@ import api from '../../api';
 
 const sectionTitleClass = 'text-[13px] font-black uppercase tracking-[0.14em] text-[#C8A96A]';
 const fieldLabelClass = 'mb-2 block text-[11px] font-black uppercase tracking-[0.12em] text-[#F5E6C8]/70';
-const fieldClass = 'w-full rounded-2xl border border-[#C8A96A]/15 bg-[#111111] px-4 py-3 text-sm text-[#F5E6C8] outline-none transition placeholder:text-[#F5E6C8]/30 focus:border-[#C8A96A]/50 focus:bg-[#141414]';
+const fieldClass = 'w-full min-w-0 rounded-2xl border border-[#C8A96A]/15 bg-[#111111] px-4 py-3 text-sm text-[#F5E6C8] outline-none transition placeholder:text-[#F5E6C8]/30 focus:border-[#C8A96A]/50 focus:bg-[#141414]';
 
 const SectionCard = ({ icon: Icon, title, children, rightSlot = null }) => (
-    <div className="overflow-hidden rounded-[2rem] border border-[#C8A96A]/12 bg-[#1A1A1A] shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
-        <div className="flex flex-col gap-3 border-b border-white/5 bg-[linear-gradient(135deg,#1f1f1f_0%,#191919_50%,#151515_100%)] px-5 py-4 md:flex-row md:items-center md:justify-between">
+    <div className="max-w-full overflow-hidden rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#1A1A1A] shadow-[0_20px_50px_rgba(0,0,0,0.35)] md:rounded-[2rem]">
+        <div className="flex flex-col gap-3 border-b border-white/5 bg-[linear-gradient(135deg,#1f1f1f_0%,#191919_50%,#151515_100%)] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
             <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#C8A96A]/10 text-[#C8A96A]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#C8A96A]/10 text-[#C8A96A]">
                     <Icon size={18} />
                 </div>
-                <div className={sectionTitleClass}>{title}</div>
+                <div className={`${sectionTitleClass} min-w-0 break-words`}>{title}</div>
             </div>
             {rightSlot}
         </div>
-        <div className="p-5 md:p-6">{children}</div>
+        <div className="p-4 md:p-6">{children}</div>
     </div>
 );
 
@@ -139,7 +139,7 @@ export default function ProductWalletRequest() {
     };
 
     return (
-        <div className="min-h-screen bg-[#0D0D0D] px-4 py-6 md:px-6">
+        <div className="min-h-screen overflow-x-hidden bg-[#0D0D0D] px-2 py-4 sm:px-4 sm:py-6 md:px-6">
             <style>{`
                 .wallet-request-theme input:-webkit-autofill,
                 .wallet-request-theme textarea:-webkit-autofill,
@@ -150,7 +150,7 @@ export default function ProductWalletRequest() {
                 }
             `}</style>
 
-            <div className="wallet-request-theme mx-auto max-w-[1280px] space-y-6">
+            <div className="wallet-request-theme mx-auto max-w-[1280px] space-y-4 sm:space-y-6">
                 <SectionCard icon={WalletCards} title="Product Wallet Request">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -186,7 +186,7 @@ export default function ProductWalletRequest() {
                                     onChange={handleChange}
                                     rows="4"
                                     placeholder="Enter bank details"
-                                    className={`${fieldClass} resize-none`}
+                                    className={`${fieldClass} min-h-[120px] resize-none`}
                                 />
                             </div>
 
@@ -230,19 +230,19 @@ export default function ProductWalletRequest() {
                             <div className="md:col-span-2">
                                 <label className={fieldLabelClass}>Attachment</label>
                                 <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-[#C8A96A]/20 bg-[#111111] p-4 md:flex-row md:items-center md:justify-between">
-                                    <div className="flex items-center gap-3 text-[#F5E6C8]/70">
+                                    <div className="flex min-w-0 items-center gap-3 text-[#F5E6C8]/70">
                                         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#C8A96A]/10 text-[#C8A96A]">
                                             <FileUp size={18} />
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-sm font-semibold text-[#F5E6C8]">
+                                            <p className="truncate text-sm font-semibold text-[#F5E6C8]">
                                                 {formData.attachment ? formData.attachment.name : 'No file chosen'}
                                             </p>
                                             <p className="text-xs text-[#F5E6C8]/45">Upload receipt or bank proof</p>
                                         </div>
                                     </div>
 
-                                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-[#C8A96A] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d]">
+                                    <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#C8A96A] px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] md:w-auto">
                                         <Landmark size={16} />
                                         Choose File
                                         <input type="file" name="attachment" onChange={handleChange} className="hidden" />
@@ -261,7 +261,7 @@ export default function ProductWalletRequest() {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="rounded-2xl bg-[#C8A96A] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="w-full rounded-2xl bg-[#C8A96A] px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#111111] transition hover:bg-[#d5b87d] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                             >
                                 {submitting ? 'Submitting...' : 'Submit Request'}
                             </button>
@@ -287,27 +287,43 @@ export default function ProductWalletRequest() {
                             <p className="text-sm text-[#F5E6C8]/50">No request history found.</p>
                         </div>
                     ) : (
-                        <div className="overflow-hidden rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#111111]">
-                            <div className="overflow-x-auto">
-                                <table className="w-full min-w-[860px] border-collapse text-left text-sm text-[#F5E6C8]">
-                                    <thead>
-                                        <tr className="border-b border-white/5 bg-[#171717] text-[11px] uppercase tracking-[0.12em] text-[#C8A96A]">
-                                            <th className="px-4 py-3">Bank</th>
-                                            <th className="px-4 py-3">Payment Mode</th>
-                                            <th className="px-4 py-3">Amount</th>
-                                            <th className="px-4 py-3">Remark</th>
-                                            <th className="px-4 py-3">Attachment</th>
-                                            <th className="px-4 py-3">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {submittedData.map((item) => (
-                                            <tr key={item._id} className="border-b border-white/5 last:border-b-0">
-                                                <td className="px-4 py-4">{item.bankName || '-'}</td>
-                                                <td className="px-4 py-4">{item.paymentMode}</td>
-                                                <td className="px-4 py-4">Rs {formatCurrency(item.requestAmount)}</td>
-                                                <td className="px-4 py-4">{item.remark || '-'}</td>
-                                                <td className="px-4 py-4">
+                        <>
+                            <div className="space-y-3 md:hidden">
+                                {submittedData.map((item, index) => (
+                                    <div
+                                        key={item._id}
+                                        className="rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#111111] p-4 shadow-[0_14px_30px_rgba(0,0,0,0.22)]"
+                                    >
+                                        <div className="mb-3 flex items-start justify-between gap-3">
+                                            <div>
+                                                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[#C8A96A]/70">
+                                                    Request {index + 1}
+                                                </div>
+                                                <div className="mt-1 text-sm font-black text-white">
+                                                    {item.bankName || '-'}
+                                                </div>
+                                            </div>
+                                            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${item.status === 'Approved' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : item.status === 'Rejected' ? 'border border-rose-500/20 bg-rose-500/10 text-rose-300' : 'border border-amber-500/20 bg-amber-500/10 text-amber-300'}`}>
+                                                {item.status}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2.5 text-sm">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <span className="text-[#F5E6C8]/55">Payment</span>
+                                                <span className="text-right font-semibold uppercase text-[#F5E6C8]">{item.paymentMode}</span>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-4">
+                                                <span className="text-[#F5E6C8]/55">Amount</span>
+                                                <span className="text-right font-black text-white">Rs {formatCurrency(item.requestAmount)}</span>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-4">
+                                                <span className="text-[#F5E6C8]/55">Remark</span>
+                                                <span className="max-w-[62%] break-words text-right font-semibold text-[#F5E6C8]">{item.remark || '-'}</span>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-4">
+                                                <span className="text-[#F5E6C8]/55">Attachment</span>
+                                                <span className="text-right font-semibold text-[#F5E6C8]">
                                                     {item.attachment ? (
                                                         <a href={item.attachment} target="_blank" rel="noreferrer" className="text-[#C8A96A] underline">
                                                             View
@@ -315,18 +331,54 @@ export default function ProductWalletRequest() {
                                                     ) : (
                                                         'No File'
                                                     )}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${item.status === 'Approved' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : item.status === 'Rejected' ? 'border border-rose-500/20 bg-rose-500/10 text-rose-300' : 'border border-amber-500/20 bg-amber-500/10 text-amber-300'}`}>
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        </div>
+
+                            <div className="hidden overflow-hidden rounded-[1.5rem] border border-[#C8A96A]/12 bg-[#111111] md:block">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[860px] border-collapse text-left text-sm text-[#F5E6C8]">
+                                        <thead>
+                                            <tr className="border-b border-white/5 bg-[#171717] text-[11px] uppercase tracking-[0.12em] text-[#C8A96A]">
+                                                <th className="px-4 py-3">Bank</th>
+                                                <th className="px-4 py-3">Payment Mode</th>
+                                                <th className="px-4 py-3">Amount</th>
+                                                <th className="px-4 py-3">Remark</th>
+                                                <th className="px-4 py-3">Attachment</th>
+                                                <th className="px-4 py-3">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {submittedData.map((item) => (
+                                                <tr key={item._id} className="border-b border-white/5 last:border-b-0">
+                                                    <td className="px-4 py-4">{item.bankName || '-'}</td>
+                                                    <td className="px-4 py-4">{item.paymentMode}</td>
+                                                    <td className="px-4 py-4">Rs {formatCurrency(item.requestAmount)}</td>
+                                                    <td className="px-4 py-4">{item.remark || '-'}</td>
+                                                    <td className="px-4 py-4">
+                                                        {item.attachment ? (
+                                                            <a href={item.attachment} target="_blank" rel="noreferrer" className="text-[#C8A96A] underline">
+                                                                View
+                                                            </a>
+                                                        ) : (
+                                                            'No File'
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-4">
+                                                        <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${item.status === 'Approved' ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300' : item.status === 'Rejected' ? 'border border-rose-500/20 bg-rose-500/10 text-rose-300' : 'border border-amber-500/20 bg-amber-500/10 text-amber-300'}`}>
+                                                            {item.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </SectionCard>
             </div>
