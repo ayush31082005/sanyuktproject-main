@@ -11,6 +11,7 @@ const {
     REPURCHASE_INCOME_TYPES,
     REPURCHASE_WALLET_TYPE,
 } = require("../config/repurchaseBonusConfig");
+const { getWalletBalance, createWalletLedgerEntry } = require("../utils/walletLedgerUtils");
 
 exports.calculateDailyMatchingBonus = async () => {
     try {
@@ -220,16 +221,20 @@ exports.getMLMStats = async (req, res) => {
             legacyIncomeBreakdown.find((row) => row._id === "Repurchase")?.totalAmount || 0
         );
 
-        const rawGenerationWalletBalance = Number(user.generationWalletBalance || 0);
-        const rawRepurchaseWalletBalance = Number(user.repurchaseWalletBalance || 0);
         const totalGenerationIncome = Number(user.totalGenerationIncome || 0);
-        const derivedGenerationWalletBalance =
-            rawGenerationWalletBalance > 0
-                ? rawGenerationWalletBalance
-                : legacyGenerationWalletIncome > 0
-                    ? legacyGenerationWalletIncome
-                    : totalGenerationIncome;
-        const derivedRepurchaseWalletBalance = rawRepurchaseWalletBalance;
+        const [generationWalletSummary, repurchaseWalletSummary] = await Promise.all([
+            getWalletBalance(user._id, "generation-wallet"),
+            getWalletBalance(user._id, "repurchase-wallet"),
+        ]);
+        const derivedGenerationWalletBalance = Number(
+            generationWalletSummary.balance ||
+                legacyGenerationWalletIncome ||
+                totalGenerationIncome ||
+                0
+        );
+        const derivedRepurchaseWalletBalance = Number(
+            repurchaseWalletSummary.balance || 0
+        );
 
         const stats = {
             walletBalance: Number(user.walletBalance || 0),
@@ -321,9 +326,27 @@ exports.handleRepurchase = async (userId, amount, bv) => {
             const incomeAmount = bv * (genRates[generation] || 0.005);
 
             if (incomeAmount > 0) {
-                parent.generationWalletBalance = Number(parent.generationWalletBalance || 0) + incomeAmount;
-                parent.totalGenerationIncome = Number(parent.totalGenerationIncome || 0) + incomeAmount;
-                await parent.save();
+                await User.findByIdAndUpdate(parent._id, {
+                    $inc: { totalGenerationIncome: incomeAmount },
+                });
+
+                await createWalletLedgerEntry({
+                    userId: parent._id,
+                    walletType: "generation-wallet",
+                    txType: "credit",
+                    amount: incomeAmount,
+                    sourceType: "Generation",
+                    sourceId: user._id,
+                    entryType: "Generation",
+                    referenceId: `generation:repurchase:${user._id}:L${generation}:${parent._id}`,
+                    description: `Generation ${generation} income from ${user.memberId} repurchase`,
+                    meta: {
+                        sourceUserId: user._id,
+                        sourceMemberId: user.memberId || "",
+                        level: generation,
+                        bv: Number(bv || 0),
+                    },
+                });
 
                 await IncomeHistory.create({
                     userId: parent._id,

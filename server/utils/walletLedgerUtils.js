@@ -32,6 +32,25 @@ const normalizeWalletType = (walletType) => {
     return map[String(walletType).toLowerCase()] || walletType;
 };
 
+const SHARED_WALLET_TYPES = ["generation-wallet", "repurchase-wallet"];
+const roundCurrency = (value) => Number(Number(value || 0).toFixed(2));
+
+const isSharedWalletType = (walletType) =>
+    REPURCHASE_WALLET_TYPE === "generation-wallet" &&
+    SHARED_WALLET_TYPES.includes(normalizeWalletType(walletType));
+
+const getSharedWalletMirrorType = (walletType) => {
+    const normalizedWalletType = normalizeWalletType(walletType);
+
+    if (!isSharedWalletType(normalizedWalletType)) {
+        return null;
+    }
+
+    return normalizedWalletType === "generation-wallet"
+        ? "repurchase-wallet"
+        : "generation-wallet";
+};
+
 const resolveWalletField = (walletType) => {
     const normalized = normalizeWalletType(walletType);
     const walletField = WALLET_FIELDS[normalized];
@@ -43,7 +62,7 @@ const resolveWalletField = (walletType) => {
     return { normalizedWalletType: normalized, walletField };
 };
 
-const deriveLegacyIncomeBalance = async (userId, walletType) => {
+const deriveLegacyIncomeBalance = async (userId, walletType, { session = null } = {}) => {
     const legacyIncomeTypeMap = {
         "generation-wallet": Array.from(
             new Set([
@@ -60,22 +79,34 @@ const deriveLegacyIncomeBalance = async (userId, walletType) => {
         return 0;
     }
 
+    const latestLedgerQuery = WalletLedger.findOne({ userId, walletType }).sort({
+        createdAt: -1,
+    });
+    if (session) {
+        latestLedgerQuery.session(session);
+    }
+
+    const incomeAggregate = IncomeHistory.aggregate([
+        {
+            $match: {
+                userId,
+                type: { $in: legacyTypes },
+            },
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: "$amount" },
+            },
+        },
+    ]);
+    if (session) {
+        incomeAggregate.session(session);
+    }
+
     const [latestLedgerEntry, incomeTotals] = await Promise.all([
-        WalletLedger.findOne({ userId, walletType }).sort({ createdAt: -1 }),
-        IncomeHistory.aggregate([
-            {
-                $match: {
-                    userId,
-                    type: { $in: legacyTypes },
-                },
-            },
-            {
-                $group: {
-                    _id: null,
-                    total: { $sum: "$amount" },
-                },
-            },
-        ]),
+        latestLedgerQuery,
+        incomeAggregate,
     ]);
 
     if (latestLedgerEntry) {
@@ -85,14 +116,109 @@ const deriveLegacyIncomeBalance = async (userId, walletType) => {
     return Number(incomeTotals[0]?.total || 0);
 };
 
-const resolveCurrentWalletBalance = async (userId, walletType, user) => {
+const resolveSharedWalletBalance = async (
+    userId,
+    user,
+    { session = null, persistSharedBalance = false } = {}
+) => {
+    let targetUser = user;
+
+    if (
+        !targetUser ||
+        targetUser.generationWalletBalance === undefined ||
+        targetUser.repurchaseWalletBalance === undefined
+    ) {
+        const sharedUserQuery = User.findById(userId).select(
+            "generationWalletBalance repurchaseWalletBalance"
+        );
+        if (session) {
+            sharedUserQuery.session(session);
+        }
+        targetUser = await sharedUserQuery;
+    }
+
+    if (!targetUser) {
+        throw new Error("User not found");
+    }
+
+    const rawGenerationBalance = roundCurrency(targetUser.generationWalletBalance || 0);
+    const rawRepurchaseBalance = roundCurrency(targetUser.repurchaseWalletBalance || 0);
+
+    const [legacyGenerationBalance, latestRepurchaseLedgerEntry] = await Promise.all([
+        rawGenerationBalance > 0
+            ? 0
+            : deriveLegacyIncomeBalance(userId, "generation-wallet", { session }),
+        rawRepurchaseBalance > 0
+            ? null
+            : (() => {
+                  const latestRepurchaseQuery = WalletLedger.findOne({
+                      userId,
+                      walletType: "repurchase-wallet",
+                  }).sort({ createdAt: -1 });
+                  if (session) {
+                      latestRepurchaseQuery.session(session);
+                  }
+                  return latestRepurchaseQuery;
+              })(),
+    ]);
+
+    const effectiveGenerationBalance =
+        rawGenerationBalance > 0
+            ? rawGenerationBalance
+            : roundCurrency(legacyGenerationBalance);
+    const effectiveRepurchaseBalance =
+        rawRepurchaseBalance > 0
+            ? rawRepurchaseBalance
+            : roundCurrency(latestRepurchaseLedgerEntry?.balanceAfter || 0);
+    const sharedBalance = roundCurrency(
+        Math.max(effectiveGenerationBalance, effectiveRepurchaseBalance)
+    );
+
+    if (
+        persistSharedBalance &&
+        (rawGenerationBalance !== sharedBalance ||
+            rawRepurchaseBalance !== sharedBalance)
+    ) {
+        targetUser.generationWalletBalance = sharedBalance;
+        targetUser.repurchaseWalletBalance = sharedBalance;
+        await targetUser.save(session ? { session } : undefined);
+    }
+
+    return {
+        user: targetUser,
+        balance: sharedBalance,
+        generationBalance: effectiveGenerationBalance,
+        repurchaseBalance: effectiveRepurchaseBalance,
+    };
+};
+
+const resolveCurrentWalletBalance = async (
+    userId,
+    walletType,
+    user,
+    { session = null, persistSharedBalance = true } = {}
+) => {
     const { walletField, normalizedWalletType } = resolveWalletField(walletType);
     const rawBalance = Number(user?.[walletField] || 0);
+
+    if (isSharedWalletType(normalizedWalletType)) {
+        const sharedWalletSummary = await resolveSharedWalletBalance(userId, user, {
+            session,
+            persistSharedBalance,
+        });
+
+        return {
+            walletType: normalizedWalletType,
+            walletField,
+            balance: sharedWalletSummary.balance,
+        };
+    }
 
     if (rawBalance <= 0 && normalizedWalletType === "generation-wallet") {
         const legacyBalance = await deriveLegacyIncomeBalance(
             userId,
-            normalizedWalletType
+            normalizedWalletType,
+            { session }
         );
 
         if (legacyBalance > 0) {
@@ -111,15 +237,25 @@ const resolveCurrentWalletBalance = async (userId, walletType, user) => {
     };
 };
 
-const getWalletBalance = async (userId, walletType) => {
+const getWalletBalance = async (userId, walletType, options = {}) => {
     const { walletField } = resolveWalletField(walletType);
-    const user = await User.findById(userId).select(walletField);
+    const userQuery = User.findById(userId).select(
+        isSharedWalletType(walletType)
+            ? "generationWalletBalance repurchaseWalletBalance"
+            : walletField
+    );
+
+    if (options.session) {
+        userQuery.session(options.session);
+    }
+
+    const user = await userQuery;
 
     if (!user) {
         throw new Error("User not found");
     }
 
-    return resolveCurrentWalletBalance(userId, walletType, user);
+    return resolveCurrentWalletBalance(userId, walletType, user, options);
 };
 
 const createWalletLedgerEntry = async ({
@@ -170,7 +306,35 @@ const createWalletLedgerEntry = async ({
         }
 
         user[walletField] = balanceAfter;
+
+        const mirroredWalletType = getSharedWalletMirrorType(normalizedWalletType);
+        if (mirroredWalletType) {
+            const { walletField: mirroredWalletField } =
+                resolveWalletField(mirroredWalletType);
+            user[mirroredWalletField] = balanceAfter;
+        }
+
         await user.save();
+
+        if (mirroredWalletType) {
+            await WalletLedger.create({
+                userId,
+                walletType: mirroredWalletType,
+                txType,
+                amount: numericAmount,
+                balanceBefore,
+                balanceAfter,
+                sourceType,
+                entryType: entryType || sourceType,
+                sourceId,
+                referenceId,
+                description,
+                meta: {
+                    ...meta,
+                    mirroredFromWalletType: normalizedWalletType,
+                },
+            });
+        }
     }
 
     const ledgerEntry = await WalletLedger.create({
@@ -200,6 +364,9 @@ module.exports = {
     WALLET_FIELDS,
     normalizeWalletType,
     resolveWalletField,
+    resolveCurrentWalletBalance,
     getWalletBalance,
     createWalletLedgerEntry,
+    isSharedWalletType,
+    getSharedWalletMirrorType,
 };

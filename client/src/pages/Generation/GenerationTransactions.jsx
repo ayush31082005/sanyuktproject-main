@@ -26,8 +26,6 @@ const getStoredUserName = () => {
     }
 };
 
-const isGenerationTransaction = (item) => String(item?.type || '').toLowerCase() === 'generation';
-
 const GenerationTransactions = () => {
     const [loading, setLoading] = useState(true);
     const [searchMode, setSearchMode] = useState('all');
@@ -43,7 +41,7 @@ const GenerationTransactions = () => {
                     params: { search: '', walletType: 'generation-wallet' },
                 });
                 const rows = Array.isArray(res.data?.transactions) ? res.data.transactions : [];
-                setTransactions(rows.filter(isGenerationTransaction));
+                setTransactions(rows);
             } catch (error) {
                 console.error('Error fetching generation transaction report:', error);
                 setTransactions([]);

@@ -44,6 +44,8 @@ const normalizeBadge = (value) => {
     return value;
 };
 
+const shouldShowSidebarBadge = (itemId) => ['wallet', 'gen_wallet'].includes(itemId);
+
 const UserDashboardLayout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [stats, setStats] = useState(null);
@@ -343,7 +345,7 @@ const UserDashboardLayout = () => {
                                                         {item.rankBadge}
                                                     </span>
                                                 )}
-                                                {item.badge !== undefined && item.badge !== null && (
+                                                {shouldShowSidebarBadge(item.id) && item.badge !== undefined && item.badge !== null && (
                                                     <span className="mr-1 rounded-sm border border-[#c8a96a]/18 bg-[#c8a96a]/14 px-1.5 py-0.5 text-[8px] font-black text-[#f5e6c8]">
                                                         {item.badge}
                                                     </span>

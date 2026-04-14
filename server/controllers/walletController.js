@@ -481,7 +481,7 @@ exports.getAllTransactions = async (req, res) => {
             incomeConditions.push({
                 $or: [
                     { walletType: 'generation-wallet' },
-                    { type: { $in: ['Generation', 'Repurchase'] } },
+                    { type: { $in: GENERATION_INCOME_TYPES } },
                 ],
             });
         } else {

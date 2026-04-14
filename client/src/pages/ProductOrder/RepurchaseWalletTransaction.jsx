@@ -34,30 +34,13 @@ export default function RepurchaseWalletTransaction() {
     const loadReport = async (params = {}) => {
         try {
             setLoading(true);
-            const [statsRes, txRes] = await Promise.all([
-                api.get('/mlm/get-stats'),
-                api.get('/wallet/all-transactions', {
-                    params: {
-                        search: '',
-                        walletType: 'generation-wallet',
-                        ...params,
-                    },
-                }),
+            const [summaryRes, txRes] = await Promise.all([
+                api.get('/wallet/summary', { params: { walletType: 'repurchase-wallet' } }),
+                api.get('/wallet/repurchase/transactions', { params }),
             ]);
 
-            const rows = Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : [];
-            const normalizedRows = rows.map((item) => ({
-                _id: item._id,
-                createdAt: item.date,
-                txType: item.txType,
-                sourceType: item.type,
-                description: item.details || item.source || '-',
-                amount: item.amount,
-                balanceAfter: null,
-            }));
-
-            setBalance(formatCurrency(statsRes.data?.generationWalletBalance));
-            setTransactions(normalizedRows);
+            setBalance(formatCurrency(summaryRes.data?.balance));
+            setTransactions(txRes.data?.transactions || []);
         } catch (error) {
             console.error('Repurchase wallet transaction error:', error);
             setTransactions([]);
@@ -136,7 +119,7 @@ export default function RepurchaseWalletTransaction() {
                     <div className="rounded-[2rem] border border-emerald-400/20 bg-[linear-gradient(135deg,#1f8f53_0%,#34c97a_48%,#5bd48f_100%)] p-6 shadow-[0_20px_50px_rgba(0,0,0,0.28)]">
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Generation Wallet Total</p>
+                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Repurchase Wallet Total</p>
                                 <div className="mt-6 text-5xl font-black tracking-tight text-white">{balance}</div>
                             </div>
                             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
@@ -163,7 +146,7 @@ export default function RepurchaseWalletTransaction() {
                         ) : transactions.length === 0 ? (
                             <div className="flex min-h-[180px] items-center justify-center rounded-[1.5rem] border border-dashed border-[#C8A96A]/14 bg-[#121212] px-6 text-center">
                                 <p className="text-sm text-[#F5E6C8]/50">
-                                    {searched ? 'No generation wallet transactions found for the selected criteria.' : 'Use search criteria to view transaction report.'}
+                                    {searched ? 'No repurchase wallet transactions found for the selected criteria.' : 'Use search criteria to view transaction report.'}
                                 </p>
                             </div>
                         ) : (

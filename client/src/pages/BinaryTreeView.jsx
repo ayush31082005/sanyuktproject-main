@@ -22,22 +22,22 @@ const TreeNode = ({ node, depth = 0 }) => {
             <div
                 className={`rounded-2xl border px-4 py-3 shadow-[0_14px_28px_rgba(0,0,0,0.28)] ${
                     depth === 0
-                        ? 'border-[#c8a96a] bg-[linear-gradient(180deg,#fff4db_0%,#f8edd1_100%)]'
+                        ? 'border-[#7fb3d3] bg-[linear-gradient(180deg,#69a6c8_0%,#5e9fc4_100%)]'
                         : 'border-[#c8a96a]/18 bg-[#171717]'
                 }`}
             >
                 <div className="min-w-[180px] text-center">
                     <div
                         className={`text-[11px] font-black uppercase tracking-[0.16em] ${
-                            depth === 0 ? 'text-[#b35d00]' : 'text-[#c8a96a]'
+                            depth === 0 ? 'text-[#eef7ff]' : 'text-[#c8a96a]'
                         }`}
                     >
                         {depth === 0 ? 'Root User' : 'Member'}
                     </div>
-                    <div className={`mt-1 text-[14px] font-black ${depth === 0 ? 'text-[#f0c77b]' : 'text-[#f5e6c8]'}`}>
+                    <div className={`mt-1 text-[14px] font-black ${depth === 0 ? 'text-white' : 'text-[#f5e6c8]'}`}>
                         {node.name || 'Unnamed User'}
                     </div>
-                    <div className={`mt-1 text-[11px] font-bold ${depth === 0 ? 'text-[#e8d8a6]' : 'text-[#c8a96a]/82'}`}>
+                    <div className={`mt-1 text-[11px] font-bold ${depth === 0 ? 'text-[#e6f4ff]' : 'text-[#c8a96a]/82'}`}>
                         {node.memberId || node.userId}
                     </div>
                 </div>

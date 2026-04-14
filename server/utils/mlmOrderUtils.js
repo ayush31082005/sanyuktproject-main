@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const IncomeHistory = require("../models/IncomeHistory");
 const { processQualifiedFirstPurchase } = require("../services/matchingService");
+const { createWalletLedgerEntry } = require("./walletLedgerUtils");
 
 exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
     try {
@@ -48,10 +49,27 @@ exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
 
             const income = Number(bv || 0) * generationPercentages[i];
             if (income > 0) {
-                genParent.generationWalletBalance = Number(genParent.generationWalletBalance || 0) + income;
-                genParent.totalGenerationIncome =
-                    Number(genParent.totalGenerationIncome || 0) + income;
-                await genParent.save();
+                await User.findByIdAndUpdate(genParent._id, {
+                    $inc: { totalGenerationIncome: income },
+                });
+
+                await createWalletLedgerEntry({
+                    userId: genParent._id,
+                    walletType: "generation-wallet",
+                    txType: "credit",
+                    amount: income,
+                    sourceType: "Generation",
+                    sourceId: orderId || null,
+                    entryType: "Generation",
+                    referenceId: `generation:first:${orderId || user._id}:L${i + 1}:${genParent._id}`,
+                    description: `Generation income from purchase by ${user.memberId} (Level ${i + 1})`,
+                    meta: {
+                        sourceUserId: user._id,
+                        sourceMemberId: user.memberId || "",
+                        level: i + 1,
+                        bv: Number(bv || 0),
+                    },
+                });
 
                 await IncomeHistory.create({
                     userId: genParent._id,
