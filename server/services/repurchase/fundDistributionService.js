@@ -1,6 +1,9 @@
 const User = require("../../models/User");
 const IncomeHistory = require("../../models/IncomeHistory");
 const { createIncomeLedgerEntry } = require("../incomeLedgerService");
+const {
+    resolveGenerationWalletCreditAmount,
+} = require("../generationWalletCappingService");
 const { creditWallet } = require("../walletService");
 const { REPURCHASE_WALLET_TYPE } = require("../../config/repurchaseBonusConfig");
 
@@ -46,8 +49,8 @@ const creditRepurchaseIncome = async ({
     meta = {},
     session = null,
 }) => {
-    const finalAmount = roundCurrency(amount);
-    if (!userId || finalAmount <= 0) {
+    const requestedAmount = roundCurrency(amount);
+    if (!userId || requestedAmount <= 0) {
         return { created: false, reason: "invalid_amount" };
     }
 
@@ -69,6 +72,46 @@ const creditRepurchaseIncome = async ({
         }
     }
 
+    const capSummary =
+        REPURCHASE_WALLET_TYPE === "generation-wallet"
+            ? await resolveGenerationWalletCreditAmount({
+                  userId,
+                  amount: requestedAmount,
+                  session,
+              })
+            : {
+                  amount: requestedAmount,
+                  requestedAmount,
+                  cappedAmount: 0,
+                  cappingLimit: 0,
+                  cappingUsed: 0,
+                  remainingCapAfterCredit: requestedAmount,
+                  capApplied: false,
+                  skipped: false,
+                  reason: "not_applicable",
+              };
+
+    const finalAmount = roundCurrency(capSummary.amount);
+    if (finalAmount <= 0) {
+        return {
+            created: false,
+            reason: capSummary.reason || "daily_capping_reached",
+            capSummary,
+        };
+    }
+
+    const finalRemark = capSummary.capApplied
+        ? `${remark} [capped from ${capSummary.requestedAmount}]`
+        : remark;
+    const cappedMeta = {
+        ...meta,
+        requestedAmount: capSummary.requestedAmount,
+        cappedAmount: capSummary.cappedAmount,
+        cappingLimit: capSummary.cappingLimit,
+        cappingUsedBefore: capSummary.cappingUsed,
+        remainingCapAfter: capSummary.remainingCapAfterCredit,
+    };
+
     const incomeEntry = await createIncomeLedgerEntry({
         userId,
         incomeType,
@@ -78,10 +121,10 @@ const creditRepurchaseIncome = async ({
         sourceOrderId,
         fromUserId: sourceUserId,
         levelNo,
-        description: remark,
-        remark,
+        description: finalRemark,
+        remark: finalRemark,
         referenceId: normalizedReferenceId,
-        meta,
+        meta: cappedMeta,
         session,
     });
 
@@ -93,9 +136,9 @@ const creditRepurchaseIncome = async ({
         entryType,
         sourceId: sourceOrderId || incomeEntry?._id || null,
         referenceId: normalizedReferenceId,
-        description: remark,
+        description: finalRemark,
         meta: {
-            ...meta,
+            ...cappedMeta,
             incomeLedgerId: incomeEntry?._id || null,
         },
         session,
@@ -121,6 +164,7 @@ const creditRepurchaseIncome = async ({
         incomeEntry,
         walletEntry,
         amount: finalAmount,
+        capSummary,
     };
 };
 

@@ -1,6 +1,9 @@
 const User = require("../models/User");
 const IncomeHistory = require("../models/IncomeHistory");
 const { processQualifiedFirstPurchase } = require("../services/matchingService");
+const {
+    resolveGenerationWalletCreditAmount,
+} = require("../services/generationWalletCappingService");
 const { createWalletLedgerEntry } = require("./walletLedgerUtils");
 
 exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
@@ -49,25 +52,45 @@ exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
 
             const income = Number(bv || 0) * generationPercentages[i];
             if (income > 0) {
+                const capSummary = await resolveGenerationWalletCreditAmount({
+                    userId: genParent._id,
+                    amount: income,
+                });
+                const creditedAmount = Number(capSummary.amount || 0);
+                if (creditedAmount <= 0) {
+                    genParentId = genParent.parent;
+                    continue;
+                }
+
+                const baseDescription = `Generation income from purchase by ${user.memberId} (Level ${i + 1})`;
+                const description = capSummary.capApplied
+                    ? `${baseDescription} [capped from ${capSummary.requestedAmount}]`
+                    : baseDescription;
+
                 await User.findByIdAndUpdate(genParent._id, {
-                    $inc: { totalGenerationIncome: income },
+                    $inc: { totalGenerationIncome: creditedAmount },
                 });
 
                 await createWalletLedgerEntry({
                     userId: genParent._id,
                     walletType: "generation-wallet",
                     txType: "credit",
-                    amount: income,
+                    amount: creditedAmount,
                     sourceType: "Generation",
                     sourceId: orderId || null,
                     entryType: "Generation",
                     referenceId: `generation:first:${orderId || user._id}:L${i + 1}:${genParent._id}`,
-                    description: `Generation income from purchase by ${user.memberId} (Level ${i + 1})`,
+                    description,
                     meta: {
                         sourceUserId: user._id,
                         sourceMemberId: user.memberId || "",
                         level: i + 1,
                         bv: Number(bv || 0),
+                        requestedAmount: capSummary.requestedAmount,
+                        cappedAmount: capSummary.cappedAmount,
+                        cappingLimit: capSummary.cappingLimit,
+                        cappingUsedBefore: capSummary.cappingUsed,
+                        remainingCapAfter: capSummary.remainingCapAfterCredit,
                     },
                 });
 
@@ -76,11 +99,18 @@ exports.processOrderMLM = async (userId, bv, pv, options = {}) => {
                     fromUserId: user._id,
                     sourceUserId: user._id,
                     sourceOrderId: orderId || null,
-                    amount: income,
+                    amount: creditedAmount,
                     type: "Generation",
                     walletType: "generation-wallet",
                     level: i + 1,
-                    description: `Generation income from purchase by ${user.memberId} (Level ${i + 1})`,
+                    description,
+                    meta: {
+                        requestedAmount: capSummary.requestedAmount,
+                        cappedAmount: capSummary.cappedAmount,
+                        cappingLimit: capSummary.cappingLimit,
+                        cappingUsedBefore: capSummary.cappingUsed,
+                        remainingCapAfter: capSummary.remainingCapAfterCredit,
+                    },
                 });
             }
 

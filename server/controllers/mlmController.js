@@ -11,6 +11,9 @@ const {
     REPURCHASE_INCOME_TYPES,
     REPURCHASE_WALLET_TYPE,
 } = require("../config/repurchaseBonusConfig");
+const {
+    resolveGenerationWalletCreditAmount,
+} = require("../services/generationWalletCappingService");
 const { getWalletBalance, createWalletLedgerEntry } = require("../utils/walletLedgerUtils");
 
 exports.calculateDailyMatchingBonus = async () => {
@@ -326,36 +329,64 @@ exports.handleRepurchase = async (userId, amount, bv) => {
             const incomeAmount = bv * (genRates[generation] || 0.005);
 
             if (incomeAmount > 0) {
+                const capSummary = await resolveGenerationWalletCreditAmount({
+                    userId: parent._id,
+                    amount: incomeAmount,
+                });
+                const creditedAmount = Number(capSummary.amount || 0);
+                if (creditedAmount <= 0) {
+                    currentParentId = parent.parent;
+                    generation += 1;
+                    continue;
+                }
+
+                const baseDescription = `Generation ${generation} income from ${user.memberId} repurchase`;
+                const description = capSummary.capApplied
+                    ? `${baseDescription} [capped from ${capSummary.requestedAmount}]`
+                    : baseDescription;
+
                 await User.findByIdAndUpdate(parent._id, {
-                    $inc: { totalGenerationIncome: incomeAmount },
+                    $inc: { totalGenerationIncome: creditedAmount },
                 });
 
                 await createWalletLedgerEntry({
                     userId: parent._id,
                     walletType: "generation-wallet",
                     txType: "credit",
-                    amount: incomeAmount,
+                    amount: creditedAmount,
                     sourceType: "Generation",
                     sourceId: user._id,
                     entryType: "Generation",
                     referenceId: `generation:repurchase:${user._id}:L${generation}:${parent._id}`,
-                    description: `Generation ${generation} income from ${user.memberId} repurchase`,
+                    description,
                     meta: {
                         sourceUserId: user._id,
                         sourceMemberId: user.memberId || "",
                         level: generation,
                         bv: Number(bv || 0),
+                        requestedAmount: capSummary.requestedAmount,
+                        cappedAmount: capSummary.cappedAmount,
+                        cappingLimit: capSummary.cappingLimit,
+                        cappingUsedBefore: capSummary.cappingUsed,
+                        remainingCapAfter: capSummary.remainingCapAfterCredit,
                     },
                 });
 
                 await IncomeHistory.create({
                     userId: parent._id,
-                    amount: incomeAmount,
+                    amount: creditedAmount,
                     type: "Generation",
                     walletType: "generation-wallet",
                     fromUserId: user._id,
                     level: generation,
-                    description: `Generation ${generation} income from ${user.memberId} repurchase`,
+                    description,
+                    meta: {
+                        requestedAmount: capSummary.requestedAmount,
+                        cappedAmount: capSummary.cappedAmount,
+                        cappingLimit: capSummary.cappingLimit,
+                        cappingUsedBefore: capSummary.cappingUsed,
+                        remainingCapAfter: capSummary.remainingCapAfterCredit,
+                    },
                 });
             }
             currentParentId = parent.parent;
