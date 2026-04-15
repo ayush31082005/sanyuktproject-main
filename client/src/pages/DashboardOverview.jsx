@@ -74,33 +74,33 @@ const boxThemes = {
 };
 
 const MoneyBox = ({ theme, label, value }) => (
-    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[66px] ${theme.surface} ${theme.text}`}>
+    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-3.5 shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[74px] ${theme.surface} ${theme.text}`}>
         <div className="flex items-start justify-between gap-3">
-            <IndianRupee size={24} strokeWidth={2.2} className="mt-1 shrink-0" />
+            <IndianRupee size={26} strokeWidth={2.2} className="mt-1 shrink-0" />
             <div className="text-right">
-                <div className="text-[22px] font-black leading-none">{value}</div>
-                <div className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
+                <div className="text-[24px] sm:text-[26px] font-black leading-none">{value}</div>
+                <div className={`mt-2 text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
             </div>
         </div>
     </div>
 );
 
 const CountBox = ({ theme, icon: Icon, label, value }) => (
-    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[66px] ${theme.surface} ${theme.text}`}>
+    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-3.5 shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[74px] ${theme.surface} ${theme.text}`}>
         <div className="flex items-start justify-between gap-3">
-            <Icon size={20} strokeWidth={2.2} className="mt-1 shrink-0" />
+            <Icon size={22} strokeWidth={2.2} className="mt-1 shrink-0" />
             <div className="text-right">
-                <div className="text-[22px] font-black leading-none">{value}</div>
-                <div className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
+                <div className="text-[24px] sm:text-[26px] font-black leading-none">{value}</div>
+                <div className={`mt-2 text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
             </div>
         </div>
     </div>
 );
 
 const PairBox = ({ theme, label, value }) => (
-    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-4 text-center shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[84px] flex flex-col items-center justify-center ${theme.surface} ${theme.text}`}>
-        <div className="text-[26px] font-black leading-none">{value}</div>
-        <div className={`mt-2 text-[10px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
+    <div className={`overflow-hidden rounded-[2px] border border-[#c8a96a]/15 px-3 py-4.5 text-center shadow-[0_12px_24px_rgba(0,0,0,0.24)] min-h-[92px] flex flex-col items-center justify-center ${theme.surface} ${theme.text}`}>
+        <div className="text-[28px] sm:text-[30px] font-black leading-none">{value}</div>
+        <div className={`mt-2 text-[11px] sm:text-[12px] font-bold uppercase tracking-[0.08em] ${theme.subtext}`}>{label}</div>
     </div>
 );
 
@@ -256,7 +256,7 @@ const DashboardOverview = () => {
 
     return (
         <div className="mx-auto w-full max-w-[1280px] rounded-[2px] border border-[#c8a96a]/14 bg-[radial-gradient(circle_at_top,#1c1c1c_0%,#121212_55%,#0d0d0d_100%)] p-3 shadow-[0_20px_48px_rgba(0,0,0,0.34)]">
-            <div className="grid gap-3 lg:grid-cols-3">
+            <div className="hidden gap-3 lg:grid lg:grid-cols-3">
                 <div className="space-y-2">
                     <MoneyBox theme={boxThemes.mint} label="Repurchase-Wallet" value={formatMoney(viewModel.repurchaseWallet)} />
                     <MoneyBox theme={boxThemes.emerald} label="Product Wallet" value={formatMoney(viewModel.productWallet)} />
@@ -282,6 +282,32 @@ const DashboardOverview = () => {
                     <PairBox theme={boxThemes.jade} label="Current Silver Left / Right" value={formatSimplePair(viewModel.currentSilverLeft, viewModel.currentSilverRight, 0)} />
                     <PairBox theme={boxThemes.mint} label="Silver Team Left / Right" value={formatSimplePair(viewModel.totalSilverLeft, viewModel.totalSilverRight, 0)} />
                     <PairBox theme={boxThemes.lime} label="Total Gold Left / Right" value={formatSimplePair(viewModel.totalGoldLeft, viewModel.totalGoldRight, 0)} />
+                    <PairBox theme={boxThemes.emerald} label="Total Diamond Left / Right" value={formatSimplePair(viewModel.totalDiamondLeft, viewModel.totalDiamondRight, 0)} />
+                </div>
+            </div>
+
+            <div className="grid gap-3 lg:hidden">
+                <div className="space-y-2">
+                    <MoneyBox theme={boxThemes.mint} label="Repurchase-Wallet" value={formatMoney(viewModel.repurchaseWallet)} />
+                    <MoneyBox theme={boxThemes.jade} label="E-Wallet" value={formatMoney(viewModel.eWallet)} />
+                    <MoneyBox theme={boxThemes.emerald} label="Generation-Wallet" value={formatMoney(viewModel.generationWallet)} />
+                    <MoneyBox theme={boxThemes.emerald} label="Product Wallet" value={formatMoney(viewModel.productWallet)} />
+                    <MoneyBox theme={boxThemes.lime} label="Net Commission" value={formatMoney(viewModel.netCommission)} />
+                    <MoneyBox theme={boxThemes.mint} label="Paid Withdrawal" value={formatMoney(viewModel.paidWithdrawals)} />
+                    <ProfileBanner userData={userData} stats={stats} matchingReport={matchingReport} />
+                </div>
+
+                <div className="space-y-2">
+                    <CountBox theme={boxThemes.jade} icon={Network} label="Downline" value={networkCounts.downline} />
+                    <CountBox theme={boxThemes.mint} icon={Users} label="Left" value={networkCounts.left} />
+                    <CountBox theme={boxThemes.lime} icon={Users} label="Right" value={networkCounts.right} />
+                    <CountBox theme={boxThemes.emerald} icon={UserCheck} label="Active Direct" value={networkCounts.activeDirects} />
+                    <PairBox theme={boxThemes.mint} label="Total PV Left / Right" value={formatSimplePair(viewModel.totalPvLeft, viewModel.totalPvRight)} />
+                    <PairBox theme={boxThemes.jade} label="Current Silver Left / Right" value={formatSimplePair(viewModel.currentSilverLeft, viewModel.currentSilverRight, 0)} />
+                    <PairBox theme={boxThemes.mint} label="Silver Team Left / Right" value={formatSimplePair(viewModel.totalSilverLeft, viewModel.totalSilverRight, 0)} />
+                    <PairBox theme={boxThemes.lime} label="Current Gold Left / Right" value={formatSimplePair(viewModel.currentGoldLeft, viewModel.currentGoldRight, 0)} />
+                    <PairBox theme={boxThemes.lime} label="Total Gold Left / Right" value={formatSimplePair(viewModel.totalGoldLeft, viewModel.totalGoldRight, 0)} />
+                    <PairBox theme={boxThemes.jade} label="Current Diamond Left / Right" value={formatSimplePair(viewModel.currentDiamondLeft, viewModel.currentDiamondRight, 0)} />
                     <PairBox theme={boxThemes.emerald} label="Total Diamond Left / Right" value={formatSimplePair(viewModel.totalDiamondLeft, viewModel.totalDiamondRight, 0)} />
                 </div>
             </div>

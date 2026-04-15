@@ -223,6 +223,8 @@ const UserDashboardLayout = () => {
 
         if (isMobile) {
             setSidebarOpen(false);
+        } else {
+            setSidebarOpen(true);
         }
 
         const handleExternalToggle = () => setSidebarOpen((prev) => !prev);

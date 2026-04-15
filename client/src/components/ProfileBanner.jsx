@@ -26,14 +26,14 @@ const formatDate = (value) => {
 };
 
 const InfoRow = ({ icon: Icon, label, value, badge }) => (
-    <div className="flex items-center gap-2 border-b border-[#c8a96a]/12 bg-[#171717] px-2 py-2 text-[10px] font-bold text-[#c8a96a]/75">
-        <Icon size={12} className="shrink-0 text-[#c8a96a]/65" />
+    <div className="flex items-center gap-2 border-b border-[#c8a96a]/12 bg-[#171717] px-2.5 py-2.5 text-[11px] font-bold text-[#c8a96a]/75 sm:text-[12px]">
+        <Icon size={14} className="shrink-0 text-[#c8a96a]/65" />
         <span className="min-w-0 flex-1 truncate">{label}</span>
-        <span className="max-w-[120px] truncate text-right text-[10px] font-black uppercase tracking-[0.06em] text-[#f5e6c8]">
+        <span className="max-w-[140px] truncate text-right text-[11px] font-black uppercase tracking-[0.06em] text-[#f5e6c8] sm:text-[12px]">
             {value}
         </span>
         {badge ? (
-            <span className="rounded-sm border border-[#f4b5b5] bg-[#f45e61] px-1 py-0.5 text-[8px] font-black uppercase tracking-[0.06em] text-white">
+            <span className="rounded-sm border border-[#f4b5b5] bg-[#f45e61] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.06em] text-white">
                 {badge}
             </span>
         ) : null}
@@ -44,9 +44,9 @@ const ActionStrip = ({ colorClass, borderClass, label, onClick }) => (
     <button
         type="button"
         onClick={onClick}
-        className={`flex w-full items-center justify-center gap-2 border px-3 py-2 text-[9px] font-black uppercase tracking-[0.12em] text-white ${colorClass} ${borderClass}`}
+        className={`flex w-full items-center justify-center gap-2 border px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-white sm:text-[11px] ${colorClass} ${borderClass}`}
     >
-        <MessageCircle size={12} />
+        <MessageCircle size={13} />
         {label}
     </button>
 );
@@ -120,10 +120,10 @@ const ProfileBanner = ({ userData, stats, matchingReport }) => {
                             className="h-full w-full object-cover"
                         />
                     </div>
-                    <div className="mt-3 text-[18px] font-black uppercase tracking-[0.08em] text-[#7a560f]">
+                    <div className="mt-3 text-[20px] sm:text-[22px] font-black uppercase tracking-[0.08em] text-[#7a560f]">
                         {userData.userName || 'Member'}
                     </div>
-                    <div className="mt-1 text-[11px] font-bold text-[#8a6315]">
+                    <div className="mt-1 text-[12px] sm:text-[13px] font-bold text-[#8a6315]">
                         {userData.email || userData.memberId || ''}
                     </div>
                 </div>
@@ -139,13 +139,13 @@ const ProfileBanner = ({ userData, stats, matchingReport }) => {
                 <ActionStrip
                     colorClass="bg-[#ff4d4f]"
                     borderClass="border-[#f5b5b5]"
-                    label="Show WhatsApp Link Left"
+                    label="Share WhatsApp Link (Left)"
                     onClick={() => shareOnWhatsApp('left', referralLinks.left)}
                 />
                 <ActionStrip
                     colorClass="bg-[#35ca69]"
                     borderClass="border-[#a7e4b7]"
-                    label="Show WhatsApp Link Right"
+                    label="Share WhatsApp Link (Right)"
                     onClick={() => shareOnWhatsApp('right', referralLinks.right)}
                 />
             </div>
