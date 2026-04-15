@@ -410,7 +410,7 @@ const UserDashboardLayout = () => {
             </aside>
 
             <main
-                className={`min-h-[calc(100vh-94px)] flex-1 transition-all duration-300 md:min-h-[calc(100vh-121px)]
+                className={`min-h-[calc(100vh-94px)] min-w-0 flex-1 overflow-x-hidden transition-all duration-300 md:min-h-[calc(100vh-121px)]
                     ${sidebarOpen ? 'md:ml-[214px]' : 'md:ml-[82px]'}`}
             >
                 <div className="relative z-30">
@@ -442,7 +442,7 @@ const UserDashboardLayout = () => {
                     </div>
                 </div>
 
-                <div className="bg-[#0d0d0d] px-2 py-3 sm:px-3 md:px-6 md:py-6">
+                <div className="min-w-0 overflow-x-hidden bg-[#0d0d0d] px-2 py-3 sm:px-3 md:px-6 md:py-6">
                     <Outlet />
                 </div>
             </main>

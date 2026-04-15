@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft, Trophy, Target, TrendingUp, Award,
-    Lock, Star, Shield, Zap, Activity, Info
+    ArrowLeft, Trophy, Target, Award,
+    Lock, Star, Zap, Activity, Info
 } from 'lucide-react';
 import api from '../api';
 
@@ -24,25 +24,6 @@ const RANKS = [
     { name: 'MD', matchPV: 1500000, reward: 'Rs 5 Crore', color: '#EF4444' },
 ];
 
-const StatCard = ({ label, value, icon, isPoints }) => {
-    const IconComponent = icon;
-    return (
-        <div className="rounded-[1.5rem] border border-[#C8A96A]/20 bg-[#1A1A1A] p-4 shadow-sm transition-all hover:border-[#C8A96A] hover:bg-[#1A1A1A]/80 sm:rounded-[2rem] sm:p-5">
-            <div className="mb-4 flex items-center justify-between">
-                <div className="rounded-xl border border-[#C8A96A]/20 bg-[#C8A96A]/10 p-2.5 text-[#C8A96A] shadow-sm">
-                    {IconComponent && <IconComponent className="h-5 w-5 md:h-6 md:w-6" />}
-                </div>
-            </div>
-            <div>
-                <p className="break-all text-lg font-black uppercase leading-none tracking-tighter text-[#F5E6C8] sm:text-2xl">
-                    {value}{isPoints && <span className="ml-1 text-[10px] uppercase text-[#C8A96A]/60">PV</span>}
-                </p>
-                <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-[#C8A96A]/80 md:text-[10px]">{label}</p>
-            </div>
-        </div>
-    );
-};
-
 const MyRank = () => {
     const navigate = useNavigate();
     const [stats, setStats] = useState(null);
@@ -56,7 +37,6 @@ const MyRank = () => {
     }, []);
 
     const matchedPV = Number(stats?.matchedPV || 0);
-    const personalPV = Number(stats?.pv || 0);
     const currentRankName = stats?.rank || 'Member';
     const currentRankIdx = RANKS.findIndex((r) => r.name === currentRankName);
     const nextRank = RANKS[currentRankIdx + 1] || null;
@@ -161,30 +141,6 @@ const MyRank = () => {
                             </p>
                         </div>
                     </div>
-                </div>
-
-                <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4 md:mb-12 md:gap-6">
-                    <StatCard
-                        label="Personal PV"
-                        isPoints
-                        value={personalPV.toLocaleString('en-IN')}
-                        icon={Shield}
-                    />
-                    <StatCard
-                        label="Matching Bonus"
-                        value={`Rs ${Number(stats?.totalMatchingBonus || 0).toLocaleString('en-IN')}`}
-                        icon={TrendingUp}
-                    />
-                    <StatCard
-                        label="Direct Income"
-                        value={`Rs ${Number(stats?.totalDirectIncome || 0).toLocaleString('en-IN')}`}
-                        icon={Zap}
-                    />
-                    <StatCard
-                        label="Level Income"
-                        value={`Rs ${Number(stats?.totalLevelIncome || 0).toLocaleString('en-IN')}`}
-                        icon={Award}
-                    />
                 </div>
 
                 <div className="overflow-hidden rounded-[1.75rem] border border-[#C8A96A]/20 bg-[#1A1A1A] shadow-xl sm:rounded-[2rem] md:rounded-[2.5rem]">

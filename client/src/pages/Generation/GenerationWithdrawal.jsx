@@ -76,8 +76,8 @@ const GenerationWithdrawal = () => {
     const userName = getStoredUserName();
 
     return (
-        <div className="min-h-screen overflow-x-hidden bg-[#0D0D0D] px-2 py-4 text-white sm:px-3 sm:py-6 md:px-6">
-            <div className="mx-auto max-w-[1280px]">
+        <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-[#0D0D0D] px-2 py-4 text-white sm:px-3 sm:py-6 md:px-6">
+            <div className="mx-auto w-full min-w-0 max-w-[1280px]">
                 <div className="mb-5 flex flex-col items-start justify-start md:mb-6 md:flex-row md:justify-end">
                     <div className="min-w-0 w-full text-left md:text-right">
                         <h1 className="break-words text-[1.45rem] font-black leading-tight text-[#F5E6C8] sm:text-[1.7rem] md:text-[2.05rem]">
